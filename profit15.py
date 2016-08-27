@@ -10,13 +10,13 @@ from jqdata import *
 def initialize(context):
     # 定义一个全局变量, 保存要操作的股票
     # 000001(股票:平安银行)
-    # g.security = get_all_securities(["stock"]).index
-    g.security = get_index_stocks('000300.XSHG')
+    g.security = get_all_securities(["stock"]).index
+    # g.security = get_index_stocks('000300.XSHG')
     # enable_profile()
     # g.security = ['002573.XSHE']
     # g.security = get_security_info('000300.XSHG')
     g.maxBuyStocks = 10
-    g.buyAdjustTime = 7
+    g.buyAdjustTime = 6
     #卖出条件的调整次数
     
     #买入条件的量比
@@ -48,7 +48,7 @@ def handle_data(context, data):
     securities = g.security
     for security in securities:
         adjustTimes = g.adjustTims.getTimesOfAdjust(context,data,security)
-        g.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
+        # g.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
         if not adjustTimes== None:
             buyFit = adjustTimes == g.buyAdjustTime
             if(buyFit):
