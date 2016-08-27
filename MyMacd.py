@@ -144,12 +144,17 @@ class MyMacd:
     def setLastTradeDayMacd(self,security,slowEma,fastEma,Dea,date):
         if self.macdDict.has_key(security):
             securityDt = self.macdDict[security]
-            macdDict = {}
+            # macdDict = {}
+            # macdDict["slowEma"] = slowEma
+            # macdDict["fastEma"] = fastEma
+            # macdDict["dea"] = Dea
+            # macdDict["date"] = date
+            # securityDt.append(macdDict)
+            macdDict = securityDt[len(securityDt) - 1]
             macdDict["slowEma"] = slowEma
             macdDict["fastEma"] = fastEma
             macdDict["dea"] = Dea
             macdDict["date"] = date
-            securityDt.append(macdDict)
         else:
             securityDt = list()
             macdDict = {}
