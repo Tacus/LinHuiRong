@@ -79,7 +79,6 @@ class MyMacd:
                     lastDea = currentDea
                     lastMacd = currentMacd
                     date = avgs.index[i].date()
-                    self.setLastTradeDayMacd(security,lastSlowEma,lastFastEma,lastDea,end_date)
                     # self.util.logPrint ("中继date:%s, currentMacd:%s,currentDiff:%s,currentDea:%s" ,str(avgs.index[i].date()),currentMacd,currentDiff,currentDea)
                  
         else:
@@ -109,9 +108,6 @@ class MyMacd:
                 else:
                     currentSlowEma,currentFastEma,currentDea,currentMacd,currentDiff = self.caculateMacd(lastSlowEma,lastFastEma,lastDea,curHisPrice)
                     # self.util.logPrint ("currentSlowEma:%s,currentFastEma:%s,currentMacd:%s" ,currentSlowEma,currentFastEma,currentMacd)
-                if i == len(avgs) - 1:
-                    self.setLastTradeDayMacd(security,currentSlowEma,currentFastEma,currentDea,end_date)
-                    
                 lastSlowEma = currentSlowEma
                 lastFastEma = currentFastEma
                 lastDea = currentDea
@@ -119,7 +115,7 @@ class MyMacd:
                 # self.util.logPrint ("date:%s, currentMacd:%s,currentDiff:%s,currentDea:%s" ,str(avgs.index[i].date()),currentMacd,currentDiff,currentDea)
        
         currentSlowEma,currentFastEma,currentDea,currentMacd,currentDiff = self.caculateMacd(lastSlowEma,lastFastEma,lastDea,curPrice)
-        
+        self.setLastTradeDayMacd(security,currentSlowEma,currentFastEma,currentDea,context.current_dt.date())
         # caculateMacd(lastSlowEma,lastFastEma,lastDea,curPrice)
         # record(price = curPrice)
         # record(macd=currentMacd,diff = currentDiff,dea = currentDea,stand = 0)
