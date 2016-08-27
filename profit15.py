@@ -60,7 +60,7 @@ def sellStocksMethod(context,data):
         dict = data[code]
         if(not dict.isnan() and not dict.paused):
             pos = context.portfolio.positions[code]
-            g.util.logPrint ("%s   盈利15出局:%s"%(str(context.current_dt.date()),(pos.price - pos.avg_cost)/pos.avg_cost))
+            g.util.logPrint ("%s   盈利15出局:%s",str(context.current_dt.date()),(pos.price - pos.avg_cost)/pos.avg_cost)
             if (pos.price - pos.avg_cost)/pos.avg_cost >= g.sellProfitRatio:
                 order_target(code, 0)
         else:
@@ -76,10 +76,9 @@ def checkBuySit(security,context,data):
     if volumeRatioTen ==0 :
         g.util.logPrint( '十日均线为0', security)
         volumeRatioTen = 1
-    g.util.logPrint('5/10 量比：%s security:%s',volumeRatioFive/volumeRatioTen,security)
     if(volumeRatioFive/volumeRatioTen > g.volumeRatio):
         macdFit = g.macd.isMacd(context,data,security)
-        g.util.logPrint("%s,code:%s,macdFit:%s"%(str(context.current_dt.date()),security,str(macdFit)))
+        g.util.logPrint("%s,code:%s,volumeRation:%s,macdFit:%s",str(context.current_dt.date()),security,volumeRatioFive/volumeRatioTen,str(macdFit))
         if(macdFit):
             #20天均线上扬
             # lastEndDate = context.current_dt - timedelta(1)

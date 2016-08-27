@@ -90,10 +90,9 @@ def checkBuySit(security,context,data):
     if volumeRatioTen ==0 :
         g.util.logPrint( '十日均线为0', security)
         volumeRatioTen = 1
-    g.util.logPrint ('%s,code:%s,5/10 量比：%s',str(context.current_dt.date()),security,volumeRatioFive/volumeRatioTen)
     if(volumeRatioFive/volumeRatioTen > g.volumeRatio):
         macdFit = g.macd.isMacd(context,data,security)
-        g.util.logPrint("%s,code:%s,macdFit:%s",str(context.current_dt.date()),security,str(macdFit))
+        g.util.logPrint("%s,code:%s,volumeRation:%s,macdFit:%s",str(context.current_dt.date()),security,volumeRatioFive/volumeRatioTen,str(macdFit))
         if(macdFit):
             #20天均线上扬
             # lastEndDate = context.current_dt - timedelta(1)
