@@ -65,7 +65,7 @@ class MyMacd:
             lastFastEma = macdDict['fastEma']
             lastDea = macdDict['dea']
             timeDt = context.current_dt.date() - lastDate
-            if(timeDt.days > 0):
+            if(timeDt.days > 1):
                 start_date = lastDate
                 end_date = context.current_dt.date() - timedelta(1)
                 df = get_price(security, start_date = start_date ,end_date=end_date, fields=[self.macdFiled], skip_paused=True)
