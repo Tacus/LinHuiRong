@@ -67,7 +67,7 @@ class MyMacd:
             timeDt = context.current_dt.date() - lastDate
             if(timeDt.days > 0):
                 start_date = lastDate
-                end_date = context.current_dt.date()
+                end_date = context.current_dt.date() - timedelta(1)
                 df = get_price(security, start_date = start_date ,end_date=end_date, fields=[self.macdFiled], skip_paused=True)
                 avgs = df[self.macdFiled]
                 for i in range(len(avgs)):
@@ -84,7 +84,7 @@ class MyMacd:
                  
         else:
             self.util.logPrint ("start caculate macd")
-            end_date = context.current_dt.date()
+            end_date = context.current_dt.date() - timedelta(1)
             dict = get_security_info(security)
             startDate = dict.start_date
             days = end_date - startDate 
