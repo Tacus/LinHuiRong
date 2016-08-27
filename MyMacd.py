@@ -82,7 +82,6 @@ class MyMacd:
                     # self.util.logPrint ("中继date:%s, currentMacd:%s,currentDiff:%s,currentDea:%s" ,str(avgs.index[i].date()),currentMacd,currentDiff,currentDea)
                  
         else:
-            self.util.logPrint ("start caculate macd")
             end_date = context.current_dt.date() - timedelta(1)
             dict = get_security_info(security)
             startDate = dict.start_date

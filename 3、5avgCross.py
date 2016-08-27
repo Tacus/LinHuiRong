@@ -10,14 +10,14 @@ from jqdata import *
 def initialize(context):
     # 定义一个全局变量, 保存要操作的股票
     # 000001(股票:平安银行)
-    # g.security = get_all_securities(["stock"]).index
-    g.security = get_index_stocks('000300.XSHG')
+    g.security = get_all_securities(["stock"]).index
+    # g.security = get_index_stocks('000300.XSHG')
 
     # enable_profile()
     # g.security = ['002573.XSHE']
     # g.security = get_security_info('000300.XSHG')
     g.maxBuyStocks = 10
-    g.buyAdjustTime = 7
+    g.buyAdjustTime = 6
 
     g.volumeRatio = 0.1
 
@@ -41,7 +41,7 @@ def handle_data(context, data):
     securities = g.security
     for security in securities:
         adjustTimes = g.adjustTims.getTimesOfAdjust(context,data,security)
-        g.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
+        # g.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
         if not adjustTimes== None:
             buyFit = adjustTimes == g.buyAdjustTime
             if(buyFit):
@@ -66,11 +66,11 @@ def sellStocksMethod(context,data):
             slowAvg = get_price(code,end_date = endDate, fields = ['avg'],count = g.sellSlowAvgDays,skip_paused = True)
             slowAvg = sum(slowAvg.avg)/g.sellSlowAvgDays
             if(fastAvg == slowAvg):
-                bRet = not lastRet
+                bRet = lastRet
             else:
                 bRet = (fastAvg - slowAvg) >0
             if bRet != lastRet :
-                g.util.logPrint ("卖出判断：%s,code:%s adjustTime time:%s",str(context.current_dt.date()),code,adjustTime)
+                g.util.logPrint ("卖出判断code:%s adjustTime time:%s",code,adjustTime)
                 adjustTime = adjustTime +1
                 if(adjustTime == g.sellAdjustTime):
                     order_target(code, 0)
@@ -88,11 +88,11 @@ def checkBuySit(security,context,data):
     # if 
     volumeRatioFive = fiveVolume['volume'].sum()/5
     if volumeRatioTen ==0 :
-        g.util.logPrint( '十日均线为0', security)
+        g.util.logPrint( '十日均线为0 code:%s', security)
         volumeRatioTen = 1
     if(volumeRatioFive/volumeRatioTen > g.volumeRatio):
         macdFit = g.macd.isMacd(context,data,security)
-        g.util.logPrint("%s,code:%s,volumeRation:%s,macdFit:%s",str(context.current_dt.date()),security,volumeRatioFive/volumeRatioTen,str(macdFit))
+        g.util.logPrint("code:%s,volumeRation:%s,macdFit:%s",security,volumeRatioFive/volumeRatioTen,str(macdFit))
         if(macdFit):
             #20天均线上扬
             # lastEndDate = context.current_dt - timedelta(1)

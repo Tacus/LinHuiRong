@@ -47,13 +47,13 @@ class AdjustTimes:
                 highDict['lastAdjustPrice'] = current_price
                 highDict['maxPrice']=current_price
                 highDict['endDate'] = context.current_dt.date() + timedelta(1)
-                self.util.logPrint ('%s，code:%s, preMaxPrice:%s,current_price:%s,创回测开始日前三个月以来新高，重新计算调整',str(context.current_dt.date()),security,maxPrice,current_price)
+                self.util.logPrint ('code:%s, preMaxPrice:%s,current_price:%s,创回测开始日前三个月以来新高，重新计算调整',security,maxPrice,current_price)
                 return
             elif(adjustTimes > self.buyAdjustTimes):
                 self.util.logPrint ('调整次数超%s次~！',self.buyAdjustTimes)
                 #TODO 重新计算调整次数
                 return
-            self.util.logPrint( "中继计算：security：%s,endDate：%s,current_date：%s,lastRet：%s,adjustTimes%s",security,context.current_dt.date(),current_date,lastRet,adjustTimes)
+            self.util.logPrint( "中继计算：security：%s,endDate：%s,lastRet：%s,adjustTimes%s",security,current_date,lastRet,adjustTimes)
             lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,context.current_dt.date(),current_date,lastRet,adjustTimes,lastAdjustPrice)
             
             highDict['lastRet'] = lastRet
@@ -67,7 +67,7 @@ class AdjustTimes:
             index = df.high.argmax()
             if not pd.isnull(index):
                 price = df.high[index]
-                self.util.logPrint ("%s,%s" ,str(context.current_dt.date()),str(index.date()))
+                self.util.logPrint ("Code:%s,maxPrice Date:%s" ,security,str(index.date()))
                 if current_price >= price:
                     highDict = {}
                     highDict['lastRet'] = True
@@ -93,7 +93,6 @@ class AdjustTimes:
 
     def calculatePreTimeOfAdjust(self,security,end_date,current_date,lastResult,current_adjustTimes,lastAdjustPrice = None):
         if(current_date > end_date):
-            self.util.logPrint("%s，Code:%s,calculatePreTimeOfAdjust",str(current_date),security)
             return lastResult,current_adjustTimes,lastAdjustPrice
         dfTen = get_price(security,frequency='1d',end_date = current_date , fields=['avg'], count=self.slowAvgDays,skip_paused=True)
         avgTen = sum(dfTen.avg)/self.slowAvgDays
@@ -107,7 +106,7 @@ class AdjustTimes:
         else:
             bRet = (avgFive - avgTen)>0
         if(bRet != lastResult):
-            self.util.logPrint( "%s，code:%s,均线交叉avgFive:%s ,avgTen:%s " ,str(current_date),security,avgFive,avgTen)
+            self.util.logPrint( "code:%s,均线交叉avgFive:%s ,avgTen:%s ",security,avgFive,avgTen)
             if(current_adjustTimes == 0):
                 # pass
                 # self.util.logPrint " 第一次调整不做幅度判断 符合调整"
