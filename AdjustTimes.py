@@ -6,13 +6,13 @@ from MyUtil import *
 from kuanke.user_space_api import *
 class AdjustTimes:
     period = 120
-    buyAdjustTimes = 7
+    buyAdjustTimes = 6
     fMinDownRatio = 0.15
     sMinDownRatio = 0.1
     fastAvgDays = 5
     slowAvgDays = 10
     highDict = {}
-    def __init__(self,enableLog = True,period = 120,buyAdjustTimes = 7,fMinDownRatio = 0.15,sMinDownRatio = 0.1,fastAvgDays = 5,slowAvgDays = 10):
+    def __init__(self,enableLog = True,period = 120,buyAdjustTimes = 6,fMinDownRatio = 0.15,sMinDownRatio = 0.1,fastAvgDays = 5,slowAvgDays = 10):
         self.period = period
         self.buyAdjustTimes = buyAdjustTimes
         self.fMinDownRatio = fMinDownRatio
