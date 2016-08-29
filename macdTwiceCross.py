@@ -85,7 +85,7 @@ def checkBuySit(security,context,data):
         g.util.logPrint( 'code:%s 十日均线为0', security)
         volumeRatioTen = 1
     if(volumeRatioFive/volumeRatioTen > g.volumeRatio):
-        macdFit = g.macd.isMacd(context,data,security)
+        macdFit = g.macd.isMacdLowGoldCross(context,data,security)
         g.util.logPrint("code:%s,volumeRation:%s,macdFit:%s",security,volumeRatioFive/volumeRatioTen,str(macdFit))
         if(macdFit):
             #20天均线上扬
