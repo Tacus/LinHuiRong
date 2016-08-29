@@ -34,33 +34,36 @@ class AdjustTimes:
             return
         
         current_price =  data[security].high
-        if self.highDict.has_key(security):
-            highDict = self.highDict[security]
+        highDict = self.getHighDict(security)
+        if highDict:
             lastRet = highDict['lastRet']
             adjustTimes = highDict['adjustTimes']
             lastAdjustPrice = highDict['lastAdjustPrice']
             maxPrice =  highDict['maxPrice']
             current_date = highDict['endDate']
-            if current_price>maxPrice:
-                highDict['lastRet'] = True
-                highDict['adjustTimes'] = 0
-                highDict['lastAdjustPrice'] = current_price
-                highDict['maxPrice']=current_price
-                highDict['endDate'] = context.current_dt.date() + timedelta(1)
-                self.util.logPrint ('code:%s, preMaxPrice:%s,current_price:%s,创回测开始日前三个月以来新高，重新计算调整',security,maxPrice,current_price)
-                return
-            elif(adjustTimes > self.buyAdjustTimes):
-                self.util.logPrint ('调整次数超%s次~！',self.buyAdjustTimes)
-                self.removeHighDict(security)
-                #TODO 重新计算调整次数
-                return
-            self.util.logPrint( "中继计算：security：%s,endDate：%s,lastRet：%s,adjustTimes%s",security,current_date,lastRet,adjustTimes)
-            lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,context.current_dt.date(),current_date,lastRet,adjustTimes,lastAdjustPrice)
-            
-            highDict['lastRet'] = lastRet
-            highDict['adjustTimes'] = adjustTimes
-            highDict['lastAdjustPrice'] = lastAdjustPrice
-            highDict['endDate'] = context.current_dt.date() + timedelta(1)
+            timeDt = context.current_dt.date() - current_date
+            if(timeDt.days > 0):
+                if current_price>maxPrice:
+                    highDict['lastRet'] = True
+                    highDict['adjustTimes'] = 0
+                    highDict['lastAdjustPrice'] = current_price
+                    highDict['maxPrice']=current_price
+                    highDict['endDate'] = context.current_dt.date()
+                    highDict['maxDate'] = context.current_dt.date()
+                    self.util.logPrint ('code:%s, preMaxPrice:%s,current_price:%s,创回测开始日前三个月以来新高，重新计算调整',security,maxPrice,current_price)
+                    return
+                elif(adjustTimes > self.buyAdjustTimes):
+                    self.util.logPrint ('调整次数超%s次~！',self.buyAdjustTimes)
+                    self.removeHighDict(security)
+                    #TODO 重新计算调整次数
+                    return
+                self.util.logPrint( "中继计算：security：%s,endDate：%s,lastRet：%s,adjustTimes%s",security,current_date,lastRet,adjustTimes)
+                lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,context.current_dt.date(),current_date,lastRet,adjustTimes,lastAdjustPrice)
+                
+                highDict['lastRet'] = lastRet
+                highDict['adjustTimes'] = adjustTimes
+                highDict['lastAdjustPrice'] = lastAdjustPrice
+                highDict['endDate'] = context.current_dt.date()
             return adjustTimes
         else:
             endDate = context.current_dt.date()
@@ -75,7 +78,8 @@ class AdjustTimes:
                     highDict['adjustTimes'] = 0
                     highDict['lastAdjustPrice'] = current_price
                     highDict['maxPrice']=current_price
-                    highDict['endDate'] = context.current_dt.date() + timedelta(1)
+                    highDict['endDate'] = context.current_dt.date()
+                    highDict['endDate'] = context.current_dt.date()
                     self.highDict[security] = highDict
                 else:
                     #记录当前均价
@@ -88,15 +92,16 @@ class AdjustTimes:
                     highDict['adjustTimes'] = adjustTimes
                     highDict['lastAdjustPrice'] = lastAdjustPrice
                     highDict['maxPrice']=price
-                    highDict['endDate'] = context.current_dt.date() + timedelta(1)
+                    highDict['endDate'] = context.current_dt.date()
+                    highDict['maxDate'] = index.date()
                     self.highDict[security] = highDict
+                    # self.setHighDict(security,lastRet,adjustTimes,lastAdjustPrice)
                     return adjustTimes
 
     def calculatePreTimeOfAdjust(self,security,end_date,current_date,lastResult,current_adjustTimes,lastAdjustPrice = None):
 
         dfTenVolume = get_price(security,frequency='10d',start_date =current_date ,end_date = end_date , fields=['volume'], skip_paused=True)
         dfFiveVolume = get_price(security,frequency='5d',start_date =current_date ,end_date = end_date , fields=['volume'], skip_paused=True)
-        
         count = max(len(dfTenVolume),len(dfFiveVolume))
         tenCount = count*10
         fiveCount = count*5
@@ -107,15 +112,13 @@ class AdjustTimes:
         dfFiveVolume = get_price(security,frequency='5d',end_date = end_date , fields=['volume'], skip_paused=True,count = fiveCount)
         dfFiveMoney = get_price(security,frequency='5d',end_date = end_date , fields=['money'], skip_paused=True,count = fiveCount)
         avgFives = dfFiveMoney.money/dfFiveVolume.volume
-        # print len(dfTenVolume),len(dfTenVolume.volume)
-        # print count
         # print "start:%s,end:%sfive:%s,ten:%s"%(str(current_date),str(end_date),len(avgFives.index),len(avgTens.index))
-        # return lastResult,current_adjustTimes,lastAdjustPrice
         for i in range(len(avgFives)):
             avgFive = avgFives[i]
             avgTen = avgTens[i]
             bRet = lastResult
             curAdjustPrice = lastAdjustPrice
+            curIndexDate = avgTens.index[i]
             if avgFive == avgTen:
                 bRet = lastResult
             else:
@@ -126,12 +129,12 @@ class AdjustTimes:
                     # pass
                     # self.util.logPrint " 第一次调整不做幅度判断 符合调整"
                     current_adjustTimes = current_adjustTimes +1
-                    self.util.logPrint ("1调整发生了:%s,代码：%s,调整次数:%s" ,str(current_date),security,current_adjustTimes),
+                    self.util.logPrint ("1调整发生了:%s,代码：%s,调整次数:%s" ,str(curIndexDate),security,current_adjustTimes),
                 else:
                     if(current_adjustTimes < 5):
                         # self.util.logPrint "非第一次调整并且调整次数小于5"
                         if(bRet):
-                            curAdjustPrice = get_price(security,end_date = current_date,frequency ='1d', fields = ['low'],count = 5,skip_paused=True)
+                            curAdjustPrice = get_price(security,end_date = curIndexDate,frequency ='1d', fields = ['low'],count = 5,skip_paused=True)
                             curAdjustPrice = min(curAdjustPrice.low)
                             adjustRatio = ( curAdjustPrice - lastAdjustPrice) / lastAdjustPrice
                             adjustRatio = abs(adjustRatio)
@@ -145,24 +148,32 @@ class AdjustTimes:
                                 curAdjustPrice = lastAdjustPrice
                             #记录当前均价
                             # self.util.logPrint "下跌幅度判断 下跌幅度大于15 符合调整"
-                            self.util.logPrint ("2调整发生了:%s,代码：%s,调整次数:%s" ,str(current_date),security,current_adjustTimes),
+                            self.util.logPrint ("2调整发生了:%s,代码：%s,调整次数:%s" ,str(curIndexDate),security,current_adjustTimes),
                         elif not bRet:
                             if current_adjustTimes != 1 and current_adjustTimes != 3:
                                 # self.util.logPrint "下跌中的上扬不做幅度判断 符合调整"
-                                curAdjustPrice = get_price(security,end_date = current_date,frequency ='1d', fields = ['high'],count = 5,skip_paused=True)
+                                curAdjustPrice = get_price(security,end_date = curIndexDate,frequency ='1d', fields = ['high'],count = 5,skip_paused=True)
                                 curAdjustPrice = max(curAdjustPrice.high)
                                 current_adjustTimes = current_adjustTimes +1
-                                self.util.logPrint ("3调整发生了:%s,代码：%s,调整次数:%s" ,str(current_date),security,current_adjustTimes),
+                                self.util.logPrint ("3调整发生了:%s,代码：%s,调整次数:%s" ,str(curIndexDate),security,current_adjustTimes),
                     else:
                         # self.util.logPrint( "非第一次调整并且调整次数大于5 符合调整")
                         current_adjustTimes = current_adjustTimes +1
-                        self.util.logPrint ("4调整发生了:%s,代码：%s,调整次数:%s" ,str(current_date),security,current_adjustTimes),
+                        self.util.logPrint ("4调整发生了:%s,代码：%s,调整次数:%s" ,str(curIndexDate),security,current_adjustTimes),
             lastAdjustPrice = curAdjustPrice
             lastResult = bRet
-        # self.util.logPrint( security,str(current_date),avgTen,avgFive,current_adjustTimes)
+        # self.util.logPrint( security,str(curIndexDate),avgTen,avgFive,current_adjustTimes)
         return lastResult,current_adjustTimes,lastAdjustPrice
         # self.util.logPrint (avgTen , avgFive)
                 
     def removeHighDict(self,security):
         if self.highDict.has_key(security):
             del self.highDict[security]
+
+    def getHighDict(self,security):
+        if self.highDict.has_key(security):
+            return self.highDict[security]
+
+    # def setHighDict(self,security):
+        # if self.highDict.has_key(security):
+        #     return self.highDict[security]

@@ -28,8 +28,8 @@ def initialize(context):
     #卖出的盈利比例
     g.sellProfitRatio = 0.15
     
-    g.macd = MyMacd(False)
-    g.adjustTims  = AdjustTimes(False)
+    g.macd = MyMacd(True)
+    g.adjustTims  = AdjustTimes(True)
     g.util = MyUtil()
     # 初始化此策略
     # 设置我们要操作的股票池, 这里我们只操作一支股票
@@ -48,6 +48,8 @@ def handle_data(context, data):
     securities = g.security
     for security in securities:
         adjustTimes = g.adjustTims.getTimesOfAdjust(context,data,security)
+        tmp = g.adjustTims.getHighDict(security)
+        print tmp
         # g.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
         if not adjustTimes== None:
             buyFit = adjustTimes == g.buyAdjustTime
@@ -60,8 +62,9 @@ def sellStocksMethod(context,data):
         dict = data[code]
         if(not dict.isnan() and not dict.paused):
             pos = context.portfolio.positions[code]
-            g.util.logPrint ("盈利15出局:%s",(pos.price - pos.avg_cost)/pos.avg_cost)
-            if (pos.price - pos.avg_cost)/pos.avg_cost >= g.sellProfitRatio:
+            ratio = (pos.price - pos.avg_cost)/pos.avg_cost
+            g.util.logPrint ("code:%s,profitRatio:%s",code,ratio)
+            if abs(ratio)>= g.sellProfitRatio:
                 order_target(code, 0)
         else:
             continue
@@ -77,7 +80,7 @@ def checkBuySit(security,context,data):
         g.util.logPrint( '十日均线为0', security)
         volumeRatioTen = 1
     if(volumeRatioFive/volumeRatioTen > g.volumeRatio):
-        macdFit = g.macd.isMacd(context,data,security)
+        macdFit = g.macd.isMacdLowGoldCross(context,data,security)
         g.util.logPrint("code:%s,volumeRation:%s,macdFit:%s",security,volumeRatioFive/volumeRatioTen,str(macdFit))
         if(macdFit):
             #20天均线上扬

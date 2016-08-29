@@ -49,8 +49,8 @@ class MyMacd:
             self.util.logPrint("isMacdGoldCross,curInfo:%s,preInfo:%s,dea:%s"
                             , curInfo["macd"],preInfo["macd"],curInfo["dea"])
 
-            if(preInfo["macd"] <0 and curInfo["macd"] >0)
-             or (prePreInfo["macd"]<=0 and preInfo["macd"] = 0 and curInfo["macd"] >0):
+            if((preInfo["macd"] <0 and curInfo["macd"] >0)
+             or (prePreInfo["macd"]<=0 and preInfo["macd"] == 0 and curInfo["macd"] >0)):
                 self.util.logPrint ('金叉')
                 return True  
         return False
@@ -66,8 +66,8 @@ class MyMacd:
             self.util.logPrint("isMacdGoldCross,curInfo:%s,preInfo:%s,dea:%s"
                             , curInfo["macd"],preInfo["macd"],curInfo["dea"])
 
-            if(preInfo["macd"] <0 and curInfo["macd"] >0 and curInfo["dea"]<0)
-             or (prePreInfo["macd"]<=0 and preInfo["macd"] = 0 and curInfo["macd"] >0 and curInfo["dea"]<0):
+            if((preInfo["macd"] <0 and curInfo["macd"] >0 and curInfo["dea"]<0)
+             or (prePreInfo["macd"]<=0 and preInfo["macd"] == 0 and curInfo["macd"] >0 and curInfo["dea"]<0)):
                 self.util.logPrint ('金叉')
                 return True  
         return False
@@ -89,8 +89,8 @@ class MyMacd:
             self.util.logPrint("isMacdGoldCross,curInfo:%s,preInfo:%s,dea:%s"
                             , curInfo["macd"],preInfo["macd"],curInfo["dea"])
 
-            if(preInfo["macd"] >0 and curInfo["macd"] < 0 and curInfo["dea"]>0)
-             or (prePreInfo["macd"]>=0 and preInfo["macd"] = 0 and curInfo["macd"] < 0 and curInfo["dea"]>0):
+            if((preInfo["macd"] >0 and curInfo["macd"] < 0 and curInfo["dea"]>0)
+             or (prePreInfo["macd"]>=0 and preInfo["macd"] == 0 and curInfo["macd"] < 0 and curInfo["dea"]>0)):
                 self.util.logPrint ('死叉')
                 return True  
         return False
@@ -201,7 +201,7 @@ class MyMacd:
         if self.macdDict.has_key(security):
             securityList = self.macdDict[security]
             if(len(securityList) >= self.maxCache):
-                macdDict = del securityList[0]
+                del securityList[0]
             macdDict = {}
             macdDict["slowEma"] = slowEma
             macdDict["fastEma"] = fastEma
@@ -226,10 +226,10 @@ class MyMacd:
     def getLastTradeDayMacd(self,security,count = None):
         if self.macdDict.has_key(security):
             securityList = self.macdDict[security]
-            ret
-            len = len(securityList)
-            if(count and len>=count):
-                ret = securityList[len - count:]
+            ret = None
+            total = len(securityList)
+            if(count and total>=count):
+                ret = securityList[total - count:]
             elif count:
                 ret = securityList
             else:
