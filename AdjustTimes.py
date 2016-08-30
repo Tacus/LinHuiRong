@@ -24,6 +24,7 @@ class AdjustTimes:
     
     def getTimesOfAdjust(self,context,data,security):
         dict = data[security]
+        #今天停盘还是昨天停盘
         if(not dict.isnan() and not dict.paused):
             curPrice = dict.close
             factor =  dict.factor
@@ -34,8 +35,8 @@ class AdjustTimes:
             return
         
         current_price =  data[security].high
-        if self.highDict.has_key(security):
-            highDict = self.highDict[security]
+        highDict = self.getHighDict(security)
+        if highDict :
             lastRet = highDict['lastRet']
             adjustTimes = highDict['adjustTimes']
             lastAdjustPrice = highDict['lastAdjustPrice']
@@ -63,8 +64,15 @@ class AdjustTimes:
             highDict['endDate'] = context.current_dt.date() + timedelta(1)
             return adjustTimes
         else:
-            endDate = context.current_dt.date()
-            df = get_price(security,end_date = endDate,frequency = '1d',fields = 'high',skip_paused=True,count = self.period)
+
+            end_date = context.current_dt.date() - timedelta(1)
+            dict = get_security_info(security)
+            startDate = dict.start_date.date()
+            days = end_date - startDate 
+            if days.days < self.period:
+                df = get_price(security, start_date = startDate ,end_date=end_date, fields='high', skip_paused=True)
+            else:
+                df = get_price(security, end_date=end_date, fields='high', skip_paused=True,count=self.period)
             index = df.high.argmax()
             if not pd.isnull(index):
                 price = df.high[index]
@@ -166,3 +174,7 @@ class AdjustTimes:
     def removeHighDict(self,security):
         if self.highDict.has_key(security):
             del self.highDict[security]
+
+    def getHighDict(self,security):
+        if self.highDict.has_key(security):
+            return self.highDict[security]
