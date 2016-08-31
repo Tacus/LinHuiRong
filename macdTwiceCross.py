@@ -67,7 +67,7 @@ def sellStocksMethod(context,data):
                     order_target(code,0)
                     g.macd.removeCurDeathCount(security)
                 else:
-                    g.macd.setCurDeathCount(count)
+                    g.macd.setCurDeathCount(security,count)
             # pos = context.portfolio.positions[security]
             
 

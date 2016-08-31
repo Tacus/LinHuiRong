@@ -30,7 +30,7 @@ def initialize(context):
     g.sellProfitRatio = 0.15
     
     g.macd = MyMacd(False,macdFiled = "close")
-    g.adjustTims  = AdjustTimes(True)
+    g.adjustTims  = AdjustTimes(False)
     g.util = MyUtil()
     # 初始化此策略
     # 设置我们要操作的股票池, 这里我们只操作一支股票
@@ -49,16 +49,23 @@ def handle_data(context, data):
     # securities = g.security
     # for security in securities:
     # security = '002573.XSHE'
-    g.adjustTims.getTimesOfAdjust(context, data,security)
-    print g.adjustTims.getAllTradeDayMacd(security)
-        # adjustTimes = g.adjustTims.getTimesOfAdjust(context,data,security)
-        # tmp = g.adjustTims.getHighDict(security)
+    
+    # g.macd.isMacdLowGoldCross(context, data,security)
+    # tmp = g.macd.getAllTradeDayMacd(security)
+    # print tmp
+    # return
+    # g.adjustTims.getTimesOfAdjust(context, data,security)
+    # tmp = g.adjustTims.getHighDict(security)
+    # print tmp
+    for security in g.security:
+        adjustTimes = g.adjustTims.getTimesOfAdjust(context,data,security)
+        tmp = g.adjustTims.getHighDict(security)
         # print tmp
-        # # g.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
-        # if not adjustTimes== None:
-        #     buyFit = adjustTimes == g.buyAdjustTime
-        #     if(buyFit):
-        #         checkBuySit(security,context,data)
+        # g.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
+        if not adjustTimes== None:
+            buyFit = adjustTimes == g.buyAdjustTime
+            if(buyFit):
+                checkBuySit(security,context,data)
 
     # sellStocksMethod(context,data)  
 def sellStocksMethod(context,data):
