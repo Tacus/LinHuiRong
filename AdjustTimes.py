@@ -123,7 +123,6 @@ class AdjustTimes:
             dfFive = get_price(security,frequency='1d',end_date = current_date , fields='avg', count=self.fastAvgDays,skip_paused=True)
             avgFive = sum(dfFive.avg)/self.fastAvgDays
 
-            print current_date,avgTen,avgFive
             # self.util.logPrint(avgFive,avgTen)
             curAdjustPrice = lastAdjustPrice
             if avgFive == avgTen:
