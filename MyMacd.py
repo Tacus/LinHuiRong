@@ -5,24 +5,24 @@ from datetime import *
 from MyUtil import *
 from kuanke.user_space_api import *
 #import datetime.timedelta
-
+#data 去的是昨天的停 还是当天 按天回测
 class MyMacd:
     # 实测环境每天执行 ，handler_data 9.30调用 则只能取到昨天价格
-    macdFiled = 'avg'
-    curMacdFiled = "open"
-    macdSlowEmaModulus = 26.0
-    macdFastEmaModulus = 12.0
-    macdDEAModulus = 9.0
-    macdM = 2.0
-    fastModulus = 0
-    slowModulus = 0
-    deaModulus =  0
-    macdDict = {}
+    # macdFiled = 'close'
+    # curMacdFiled = "open"
+    # macdSlowEmaModulus = 26.0
+    # macdFastEmaModulus = 12.0
+    # macdDEAModulus = 9.0
+    # macdM = 2.0
+    # fastModulus = 0
+    # slowModulus = 0
+    # deaModulus =  0
+    # macdPeriod = 60
+    # maxCache = 60
     deathCountDict = {}
-    macdPeriod = 60
-    maxCache = 60
+    macdDict = {}
 
-    def __init__(self,enableLog = True,macdFiled = "avg",curMacdFiled = "open",macdFastEmaModulus = 12.0,macdSlowEmaModulus = 26.0,
+    def __init__(self,enableLog = True,macdFiled = "close",curMacdFiled = "open",macdFastEmaModulus = 12.0,macdSlowEmaModulus = 26.0,
         macdDEAModulus = 9.0,macdM = 2.0,macdPeriod = 60,maxCache = 60):
         self.macdFiled = macdFiled
         # 实测环境每天执行 ，handler_data 9.30调用 则只能取到昨天价格
@@ -49,7 +49,7 @@ class MyMacd:
             self.util.logPrint("isMacdGoldCross,curInfo:%s,preInfo:%s,dea:%s"
                             , curInfo["macd"],preInfo["macd"],curInfo["dea"])
 
-            if((preInfo["macd"] <0 and curInfo["macd"] >0)
+            if((preInfo["macd"] < 0 and curInfo["macd"] >0)
              or (prePreInfo["macd"]<=0 and preInfo["macd"] == 0 and curInfo["macd"] >0)):
                 self.util.logPrint ('金叉')
                 return True  
@@ -107,10 +107,7 @@ class MyMacd:
         if(not factor == 1.0):
             self.removeTradeDayMacd(security)   
             self.util.logPrint ("除权factor:%s，重新计算macd",factor)
-        lastSlowEma = 0
-        lastFastEma = 0
-        lastMacd = 0
-        lastDea = 0
+
         currentSlowEma = 0
         currentFastEma = 0
         currentMacd = 0
@@ -119,82 +116,70 @@ class MyMacd:
         macdDict = self.getLastTradeDayMacd(security)
         if not macdDict == None:
             lastDate = macdDict['date']
-            lastSlowEma = macdDict['slowEma']
-            lastFastEma = macdDict['fastEma']
-            lastDea = macdDict['dea']
-            timeDt = context.current_dt.date() - lastDate
+            currentSlowEma = macdDict['slowEma']
+            currentFastEma = macdDict['fastEma']
+            currentDea = macdDict['dea']
+            timeDt = context.current_dt.date() - lastDate - timedelta(1)
+            #周一情况
             if(timeDt.days > 0):
-                start_date = lastDate
-                end_date = context.current_dt.date()
+                start_date = lastDate + timedelta(1)
+                end_date = context.current_dt.date() - timedelta(1)
                 df = get_price(security, start_date = start_date ,end_date=end_date, fields=[self.macdFiled], skip_paused=True)
                 avgs = df[self.macdFiled]
                 for i in range(len(avgs)):
-                     # self.util.logPrint ("lastSlowEma:%s,lastFastEma:%s,lastDea:%s" ,lastSlowEma,lastFastEma,lastDea)
+                     # self.util.logPrint ("currentSlowEma:%s,currentFastEma:%s,currentDea:%s" ,currentSlowEma,currentFastEma,currentDea)
                     date = avgs.index[i].date()
                     curHisPrice = avgs[i]
-                    currentSlowEma,currentFastEma,currentDea,currentMacd,currentDiff = self.caculateMacd(lastSlowEma,lastFastEma,lastDea,curHisPrice)
+                    currentSlowEma,currentFastEma,currentDea,currentMacd = self.caculateMacd(currentSlowEma,currentFastEma,currentDea,curHisPrice)
                     self.setLastTradeDayMacd(security,currentSlowEma,currentFastEma,currentDea,currentMacd,date)
-                    lastSlowEma = currentSlowEma
-                    lastFastEma = currentFastEma
-                    lastDea = currentDea
-                    lastMacd = currentMacd
                     # self.util.logPrint ("中继date:%s, currentMacd:%s,currentDiff:%s,currentDea:%s" ,str(avgs.index[i].date()),currentMacd,currentDiff,currentDea)
             # #当前已经计算过
             # else:
             #     return
             
         else:
-            end_date = context.current_dt.date()
+            end_date = context.current_dt.date() - timedelta(1)
             dict = get_security_info(security)
             startDate = dict.start_date
             days = end_date - startDate 
             if days.days < self.macdPeriod:
-                df = get_price(security, start_date = startDate ,end_date=end_date, fields=[self.macdFiled], skip_paused=True)
+                df = get_price(security, start_date = startDate ,end_date=end_date, fields=self.macdFiled, skip_paused=True)
             else:
-                df = get_price(security, end_date=end_date, fields=[self.macdFiled], skip_paused=True,count=self.macdPeriod)
-        # self.util.logPrint (curPrice)
+                df = get_price(security, end_date=end_date, fields=self.macdFiled, skip_paused=True,count=self.macdPeriod)
+            # self.util.logPrint (curPrice)
             avgs = df[self.macdFiled]
-        # self.util.logPrint (len(avgs))
+            # self.util.logPrint (len(avgs))
             for i in range(len(avgs)):
             # self.util.logPrint ("lastSlowEma:%s,lastFastEma:%s,lastDea:%s" ,lastSlowEma,lastFastEma,lastDea)
                 curHisPrice = avgs[i]
                 if i==0:
-                   pass
+                    currentSlowEma = curHisPrice
+                    currentFastEma = curHisPrice
+                    # pass
                 elif i == 1:
-                    currentSlowEma = lastSlowEma + curHisPrice*self.slowModulus
-                    currentFastEma = lastFastEma + curHisPrice*self.slowModulus
+                    currentSlowEma = currentSlowEma + (currentSlowEma -curHisPrice) * self.slowModulus
+                    currentFastEma = currentFastEma + (currentFastEma - curHisPrice) * self.fastModulus
                     currentDiff =  currentFastEma - currentSlowEma
-                    currentDea = lastDea + currentDiff*self.deaModulus
-                    currentMacd = 5*(currentDiff - currentDea)
+                    currentDea = currentDea + currentDiff*self.deaModulus
+                    currentMacd = 2*(currentDiff - currentDea)
                 else:
-                    currentSlowEma,currentFastEma,currentDea,currentMacd,currentDiff = self.caculateMacd(lastSlowEma,lastFastEma,lastDea,curHisPrice)
+                    currentSlowEma,currentFastEma,currentDea,currentMacd = self.caculateMacd(currentSlowEma,currentFastEma,currentDea,curHisPrice)
                     # self.util.logPrint ("currentSlowEma:%s,currentFastEma:%s,currentMacd:%s" ,currentSlowEma,currentFastEma,currentMacd)
-                lastSlowEma = currentSlowEma
-                lastFastEma = currentFastEma
-                lastDea = currentDea
-                lastMacd = currentMacd
                 date = avgs.index[i].date()
                 # self.util.logPrint ("date:%s, currentMacd:%s,currentDiff:%s,currentDea:%s" ,str(avgs.index[i].date()),currentMacd,currentDiff,currentDea)
                 self.setLastTradeDayMacd(security,currentSlowEma,currentFastEma,currentDea,currentMacd,date)
-        # currentSlowEma,currentFastEma,currentDea,currentMacd,currentDiff = self.caculateMacd(lastSlowEma,lastFastEma,lastDea,curPrice)
-        # self.setLastTradeDayMacd(security,currentSlowEma,currentFastEma,currentDea,currentMacd,context.current_dt.date())
-        # # caculateMacd(lastSlowEma,lastFastEma,lastDea,curPrice)
-        # # record(price = curPrice)
-        # # record(macd=currentMacd,diff = currentDiff,dea = currentDea,stand = 0)
-        # info = {}
-        # info["currentMacd"] = currentMacd
-        # info["lastMacd"] = lastMacd
-        # info["currentDiff"] = currentDiff
-        # info["currentDea"] = currentDea
-        # return info        
         
     def caculateMacd(self,lastSlowEma,lastFastEma,lastDea,curPrice):
+        self.util.logPrint ("---start:lastSlowEma:%s,lastFastEma:%s,lastDea:%s,curPrice:%s" ,
+            lastSlowEma,lastFastEma,lastDea,curPrice)
         currentSlowEma = lastSlowEma*(1-self.slowModulus) + curPrice*self.slowModulus
         currentFastEma = lastFastEma*(1-self.fastModulus) + curPrice*self.fastModulus
         currentDiff =  currentFastEma - currentSlowEma
         currentDea = lastDea*(1-self.deaModulus) + currentDiff*self.deaModulus
         currentMacd = 2*(currentDiff - currentDea)
-        return currentSlowEma,currentFastEma,currentDea,currentMacd,currentDiff
+        self.util.logPrint ("----end:currentSlowEma:%s,currentFastEma:%s,currentDiff:%s,currentDea:%s,currentMacd:%s" ,
+            currentSlowEma,currentFastEma,currentDiff,currentDea,currentMacd)
+        return currentSlowEma,currentFastEma,currentDea,currentMacd
         
         
     def setLastTradeDayMacd(self,security,slowEma,fastEma,Dea,Macd,date):
@@ -227,9 +212,10 @@ class MyMacd:
         if self.macdDict.has_key(security):
             securityList = self.macdDict[security]
             ret = None
-            total = len(securityList)
-            if(count and total>=count):
-                ret = securityList[total - count:]
+
+            listLen = len(securityList)
+            if(count and listLen>=count):
+                ret = securityList[listLen - count:]
             elif count:
                 ret = securityList
             else:
