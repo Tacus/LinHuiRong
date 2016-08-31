@@ -119,11 +119,12 @@ class MyMacd:
             currentSlowEma = macdDict['slowEma']
             currentFastEma = macdDict['fastEma']
             currentDea = macdDict['dea']
+            start_date = lastDate + timedelta(1)
+            end_date = context.current_dt.date() - timedelta(1)
+            # timeDt = end_date - start_date
             timeDt = context.current_dt.date() - lastDate - timedelta(1)
             #周一情况
-            if(timeDt.days > 0):
-                start_date = lastDate + timedelta(1)
-                end_date = context.current_dt.date() - timedelta(1)
+            if(timeDt.days >= 0):
                 df = get_price(security, start_date = start_date ,end_date=end_date, fields=[self.macdFiled], skip_paused=True)
                 avgs = df[self.macdFiled]
                 for i in range(len(avgs)):
