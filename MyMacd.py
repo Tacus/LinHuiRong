@@ -23,7 +23,7 @@ class MyMacd:
     macdDict = {}
 
     def __init__(self,enableLog = True,macdFiled = "close",curMacdFiled = "open",macdFastEmaModulus = 12.0,macdSlowEmaModulus = 26.0,
-        macdDEAModulus = 9.0,macdM = 2.0,macdPeriod = 60,maxCache = 60):
+        macdDEAModulus = 9.0,macdM = 2.0,macdPeriod = 120,maxCache = 60):
         self.macdFiled = macdFiled
         # 实测环境每天执行 ，handler_data 9.30调用 则只能取到昨天价格
         self.curMacdFiled = curMacdFiled
@@ -32,12 +32,11 @@ class MyMacd:
         self.macdDEAModulus = macdDEAModulus
         self.macdM = macdM
         self.macdPeriod = macdPeriod
-        self.fastModulus = self.macdM/self.macdFastEmaModulus+1
-        self.slowModulus = self.macdM/self.macdSlowEmaModulus+1
-        self.deaModulus =  self.macdM/self.macdDEAModulus+1
+        self.fastModulus = self.macdM/(self.macdFastEmaModulus+1)
+        self.slowModulus = self.macdM/(self.macdSlowEmaModulus+1)
+        self.deaModulus =  self.macdM/(self.macdDEAModulus+1)
         self.maxCache = maxCache
         self.util = MyUtil(enableLog)
-
     def isMacdGoldCross(self,context,data,security):
         
         self.calculateMacdInfo(context,data,security)
@@ -146,19 +145,16 @@ class MyMacd:
                 df = get_price(security, start_date = startDate ,end_date=end_date, fields=self.macdFiled, skip_paused=True)
             else:
                 df = get_price(security, end_date=end_date, fields=self.macdFiled, skip_paused=True,count=self.macdPeriod)
-            # self.util.logPrint (curPrice)
             avgs = df[self.macdFiled]
-            # self.util.logPrint (len(avgs))
             for i in range(len(avgs)):
-            # self.util.logPrint ("lastSlowEma:%s,lastFastEma:%s,lastDea:%s" ,lastSlowEma,lastFastEma,lastDea)
                 curHisPrice = avgs[i]
                 if i==0:
                     currentSlowEma = curHisPrice
                     currentFastEma = curHisPrice
                     # pass
                 elif i == 1:
-                    currentSlowEma = currentSlowEma + (currentSlowEma -curHisPrice) * self.slowModulus
-                    currentFastEma = currentFastEma + (currentFastEma - curHisPrice) * self.fastModulus
+                    currentSlowEma = currentSlowEma + (curHisPrice - currentSlowEma) * self.slowModulus
+                    currentFastEma = currentFastEma + (curHisPrice - currentFastEma) * self.fastModulus
                     currentDiff =  currentFastEma - currentSlowEma
                     currentDea = currentDea + currentDiff*self.deaModulus
                     currentMacd = 2*(currentDiff - currentDea)
@@ -166,19 +162,19 @@ class MyMacd:
                     currentSlowEma,currentFastEma,currentDea,currentMacd = self.caculateMacd(currentSlowEma,currentFastEma,currentDea,curHisPrice)
                     # self.util.logPrint ("currentSlowEma:%s,currentFastEma:%s,currentMacd:%s" ,currentSlowEma,currentFastEma,currentMacd)
                 date = avgs.index[i].date()
-                # self.util.logPrint ("date:%s, currentMacd:%s,currentDiff:%s,currentDea:%s" ,str(avgs.index[i].date()),currentMacd,currentDiff,currentDea)
                 self.setLastTradeDayMacd(security,currentSlowEma,currentFastEma,currentDea,currentMacd,date)
         
     def caculateMacd(self,lastSlowEma,lastFastEma,lastDea,curPrice):
-        self.util.logPrint ("---start:lastSlowEma:%s,lastFastEma:%s,lastDea:%s,curPrice:%s" ,
-            lastSlowEma,lastFastEma,lastDea,curPrice)
         currentSlowEma = lastSlowEma*(1-self.slowModulus) + curPrice*self.slowModulus
         currentFastEma = lastFastEma*(1-self.fastModulus) + curPrice*self.fastModulus
         currentDiff =  currentFastEma - currentSlowEma
         currentDea = lastDea*(1-self.deaModulus) + currentDiff*self.deaModulus
         currentMacd = 2*(currentDiff - currentDea)
-        self.util.logPrint ("----end:currentSlowEma:%s,currentFastEma:%s,currentDiff:%s,currentDea:%s,currentMacd:%s" ,
-            currentSlowEma,currentFastEma,currentDiff,currentDea,currentMacd)
+
+        currentSlowEma = round(currentSlowEma,4)
+        currentFastEma = round(currentFastEma,4)
+        currentDea = round(currentDea,4)
+        currentMacd = round(currentMacd,4)
         return currentSlowEma,currentFastEma,currentDea,currentMacd
         
         

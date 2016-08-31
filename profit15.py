@@ -10,6 +10,7 @@ from jqdata import *
 def initialize(context):
     # 定义一个全局变量, 保存要操作的股票
     # 000001(股票:平安银行)
+    set_option('use_real_price', True)
     g.security = get_all_securities(["stock"]).index
     # g.security = get_index_stocks('000300.XSHG')
     # enable_profile()
@@ -28,13 +29,13 @@ def initialize(context):
     #卖出的盈利比例
     g.sellProfitRatio = 0.15
     
-    g.macd = MyMacd(True)
+    g.macd = MyMacd(False,macdFiled = "close")
     g.adjustTims  = AdjustTimes(True)
     g.util = MyUtil()
     # 初始化此策略
     # 设置我们要操作的股票池, 这里我们只操作一支股票
     # set_universe(g.security)
-    set_option('use_real_price', True)
+    
     g.highDict = {}
     # log.info(g.security)
     
@@ -45,18 +46,21 @@ def initialize(context):
 
 # 每个单位时间(如果按天回测,则每天调用一次,如果按分钟,则每分钟调用一次)调用一次
 def handle_data(context, data):
-    securities = g.security
-    for security in securities:
-        adjustTimes = g.adjustTims.getTimesOfAdjust(context,data,security)
-        tmp = g.adjustTims.getHighDict(security)
-        print tmp
-        # g.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
-        if not adjustTimes== None:
-            buyFit = adjustTimes == g.buyAdjustTime
-            if(buyFit):
-                checkBuySit(security,context,data)
+    # securities = g.security
+    # for security in securities:
+    # security = '002573.XSHE'
+    g.adjustTims.getTimesOfAdjust(context, data,security)
+    print g.adjustTims.getAllTradeDayMacd(security)
+        # adjustTimes = g.adjustTims.getTimesOfAdjust(context,data,security)
+        # tmp = g.adjustTims.getHighDict(security)
+        # print tmp
+        # # g.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
+        # if not adjustTimes== None:
+        #     buyFit = adjustTimes == g.buyAdjustTime
+        #     if(buyFit):
+        #         checkBuySit(security,context,data)
 
-    sellStocksMethod(context,data)  
+    # sellStocksMethod(context,data)  
 def sellStocksMethod(context,data):
     for code in context.portfolio.positions:
         dict = data[code]
