@@ -6,6 +6,7 @@ from MyUtil import *
 from kuanke.user_space_api import *
 #import datetime.timedelta
 #data 去的是昨天的停 还是当天 按天回测
+# TODO 新 上 market days < period 有nan 产生
 class MyMacd:
     # 实测环境每天执行 ，handler_data 9.30调用 则只能取到昨天价格
     # macdFiled = 'close'

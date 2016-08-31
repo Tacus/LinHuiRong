@@ -87,14 +87,14 @@ class AdjustTimes:
                     highDict['lastAdjustPrice'] = current_price
                     highDict['maxPrice']=current_price
                     highDict['endDate'] = context.current_dt.date()
-                    highDict['endDate'] = context.current_dt.date()
+                    highDict['maxDate'] = context.current_dt.date()
                     self.highDict[security] = highDict
                 else:
                     #记录当前均价
                     # curAdjustPrice = get_price(security,end_date = index,frequency ='1d', fields = ['high'],count = 5)
                     # curAdjustPrice = max(curAdjustPrice.high)
-                    currentDate = index.date() + timedelta(1)
-                    lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,context.current_dt.date(),currentDate,True,0,price)
+                    calculateDateList = self.getTradeDateList(index,df.high.index)
+                    lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,calculateDateList,True,0,price)
                     highDict = {}
                     highDict['lastRet'] = lastRet
                     highDict['adjustTimes'] = adjustTimes
@@ -106,72 +106,66 @@ class AdjustTimes:
                     # self.setHighDict(security,lastRet,adjustTimes,lastAdjustPrice)
                     return adjustTimes
 
-    def calculatePreTimeOfAdjust(self,security,end_date,current_date,lastResult,current_adjustTimes,lastAdjustPrice = None):
+    def calculatePreTimeOfAdjust(self,security,calculateDateList,lastResult,current_adjustTimes,lastAdjustPrice = None):
 
-        dfTenVolume = get_price(security,frequency='10d',start_date =current_date ,end_date = end_date , fields=['volume'], skip_paused=True)
-        dfFiveVolume = get_price(security,frequency='5d',start_date =current_date ,end_date = end_date , fields=['volume'], skip_paused=True)
-        count = max(len(dfTenVolume),len(dfFiveVolume))
-        tenCount = count*10
-        fiveCount = count*5
-        dfTenVolume = get_price(security,frequency='10d',end_date = end_date , fields=['volume'], skip_paused=True,count = tenCount)
-        dfTenMoney = get_price(security,frequency='10d',end_date = end_date , fields=['money'], skip_paused=True,count = tenCount)
-        avgTens = dfTenMoney.money/dfTenVolume.volume
-        
-        dfFiveVolume = get_price(security,frequency='5d',end_date = end_date , fields=['volume'], skip_paused=True,count = fiveCount)
-        dfFiveMoney = get_price(security,frequency='5d',end_date = end_date , fields=['money'], skip_paused=True,count = fiveCount)
-        avgFives = dfFiveMoney.money/dfFiveVolume.volume
-        # print "start:%s,end:%sfive:%s,ten:%s"%(str(current_date),str(end_date),len(avgFives.index),len(avgTens.index))
-        for i in range(len(avgFives)):
-            avgFive = avgFives[i]
-            avgTen = avgTens[i]
+
+        if(current_date > end_date):
+            return lastResult,current_adjustTimes,lastAdjustPrice
+        dfTen = get_price(security,frequency='1d',end_date = current_date , fields=['avg'], count=self.slowAvgDays,skip_paused=True)
+        avgTen = sum(dfTen.avg)/self.slowAvgDays
+
+        dfFive = get_price(security,frequency='1d',end_date = current_date , fields=['avg'], count=self.fastAvgDays,skip_paused=True)
+        avgFive = sum(dfFive.avg)/self.fastAvgDays
+
+        bRet = lastResult
+        curAdjustPrice = lastAdjustPrice
+        if avgFive == avgTen:
             bRet = lastResult
-            curAdjustPrice = lastAdjustPrice
-            curIndexDate = avgTens.index[i]
-            if avgFive == avgTen:
-                bRet = lastResult
+        else:
+            bRet = (avgFive - avgTen)>0
+        if(bRet != lastResult):
+            self.util.logPrint( "code:%s,均线交叉avgFive:%s ,avgTen:%s ",security,avgFive,avgTen)
+            if(current_adjustTimes == 0):
+                # pass
+                # self.util.logPrint " 第一次调整不做幅度判断 符合调整"
+                current_adjustTimes = current_adjustTimes +1
+                self.util.logPrint ("1调整发生了:%s,代码：%s,调整次数:%s" ,str(current_date),security,current_adjustTimes),
             else:
-                bRet = (avgFive - avgTen)>0
-            if(bRet != lastResult):
-                self.util.logPrint( "code:%s,均线交叉avgFive:%s ,avgTen:%s ",security,avgFive,avgTen)
-                if(current_adjustTimes == 0):
-                    # pass
-                    # self.util.logPrint " 第一次调整不做幅度判断 符合调整"
-                    current_adjustTimes = current_adjustTimes +1
-                    self.util.logPrint ("1调整发生了:%s,代码：%s,调整次数:%s" ,str(curIndexDate),security,current_adjustTimes),
+                if(current_adjustTimes < 5):
+                    # self.util.logPrint "非第一次调整并且调整次数小于5"
+                    if(bRet):
+                        curAdjustPrice = get_price(security,end_date = current_date,frequency ='1d', fields = ['low'],count = 5,skip_paused=True)
+                        curAdjustPrice = min(curAdjustPrice.low)
+                        adjustRatio = ( curAdjustPrice - lastAdjustPrice) / lastAdjustPrice
+                        adjustRatio = abs(adjustRatio)
+                        if current_adjustTimes == 1 and adjustRatio > self.fMinDownRatio:                            
+                            current_adjustTimes = current_adjustTimes +1
+                        elif current_adjustTimes == 3 and adjustRatio > self.sMinDownRatio:
+                            current_adjustTimes = current_adjustTimes +1
+                        elif current_adjustTimes >4:
+                            current_adjustTimes = current_adjustTimes +1
+                        else:
+                            curAdjustPrice = lastAdjustPrice
+                        #记录当前均价
+                        # self.util.logPrint "下跌幅度判断 下跌幅度大于15 符合调整"
+                        self.util.logPrint ("2调整发生了:%s,代码：%s,调整次数:%s" ,str(current_date),security,current_adjustTimes),
+                    elif not bRet:
+                        if current_adjustTimes != 1 and current_adjustTimes != 3:
+                            # self.util.logPrint "下跌中的上扬不做幅度判断 符合调整"
+                            curAdjustPrice = get_price(security,end_date = current_date,frequency ='1d', fields = ['high'],count = 5,skip_paused=True)
+                            curAdjustPrice = max(curAdjustPrice.high)
+                            current_adjustTimes = current_adjustTimes +1
+                            self.util.logPrint ("3调整发生了:%s,代码：%s,调整次数:%s" ,str(current_date),security,current_adjustTimes),
                 else:
-                    if(current_adjustTimes < 5):
-                        # self.util.logPrint "非第一次调整并且调整次数小于5"
-                        if(bRet):
-                            curAdjustPrice = get_price(security,end_date = curIndexDate,frequency ='1d', fields = ['low'],count = 5,skip_paused=True)
-                            curAdjustPrice = min(curAdjustPrice.low)
-                            adjustRatio = ( curAdjustPrice - lastAdjustPrice) / lastAdjustPrice
-                            adjustRatio = abs(adjustRatio)
-                            if current_adjustTimes == 1 and adjustRatio > self.fMinDownRatio:                            
-                                current_adjustTimes = current_adjustTimes +1
-                            elif current_adjustTimes == 3 and adjustRatio > self.sMinDownRatio:
-                                current_adjustTimes = current_adjustTimes +1
-                            elif current_adjustTimes >4:
-                                current_adjustTimes = current_adjustTimes +1
-                            else:
-                                curAdjustPrice = lastAdjustPrice
-                            #记录当前均价
-                            # self.util.logPrint "下跌幅度判断 下跌幅度大于15 符合调整"
-                            self.util.logPrint ("2调整发生了:%s,代码：%s,调整次数:%s" ,str(curIndexDate),security,current_adjustTimes),
-                        elif not bRet:
-                            if current_adjustTimes != 1 and current_adjustTimes != 3:
-                                # self.util.logPrint "下跌中的上扬不做幅度判断 符合调整"
-                                curAdjustPrice = get_price(security,end_date = curIndexDate,frequency ='1d', fields = ['high'],count = 5,skip_paused=True)
-                                curAdjustPrice = max(curAdjustPrice.high)
-                                current_adjustTimes = current_adjustTimes +1
-                                self.util.logPrint ("3调整发生了:%s,代码：%s,调整次数:%s" ,str(curIndexDate),security,current_adjustTimes),
-                    else:
-                        # self.util.logPrint( "非第一次调整并且调整次数大于5 符合调整")
-                        current_adjustTimes = current_adjustTimes +1
-                        self.util.logPrint ("4调整发生了:%s,代码：%s,调整次数:%s" ,str(curIndexDate),security,current_adjustTimes),
-            lastAdjustPrice = curAdjustPrice
-            lastResult = bRet
-        # self.util.logPrint( security,str(curIndexDate),avgTen,avgFive,current_adjustTimes)
-        return lastResult,current_adjustTimes,lastAdjustPrice
+                    # self.util.logPrint( "非第一次调整并且调整次数大于5 符合调整")
+                    current_adjustTimes = current_adjustTimes +1
+                    self.util.logPrint ("4调整发生了:%s,代码：%s,调整次数:%s" ,str(current_date),security,current_adjustTimes),
+        current_date = current_date + timedelta(1)
+
+        return self.calculatePreTimeOfAdjust(security,end_date,current_date,bRet,current_adjustTimes,curAdjustPrice)
+
+        # self.util.logPrint( security,str(current_date),avgTen,avgFive,current_adjustTimes)
+        # return lastResult,current_adjustTimes,lastAdjustPrice
         # self.util.logPrint (avgTen , avgFive)
                 
     def removeHighDict(self,security):
@@ -182,3 +176,6 @@ class AdjustTimes:
         if self.highDict.has_key(security):
             return self.highDict[security]
 
+    @staticmethod
+    def getTradeDateList(startObj,dataList):
+        for 
