@@ -38,9 +38,9 @@ class MyMacd:
         self.deaModulus =  self.macdM/(self.macdDEAModulus+1)
         self.maxCache = maxCache
         self.util = MyUtil(enableLog)
-    def isMacdGoldCross(self,context,data,security):
+    def isMacdGoldCross(self,context,security,curPrice,factor):
         
-        self.calculateMacdInfo(context,data,security)
+        self.calculateMacdInfo(context,security,curPrice,factor)
         list = self.getLastTradeDayMacd(security,3)
         if(list and len(list)>2):
             prePreInfo = list[0]
@@ -55,16 +55,16 @@ class MyMacd:
                 return True  
         return False
 
-    def isMacdLowGoldCross(self,context,data,security):
+    def isMacdLowGoldCross(self,context,security,curPrice,factor):
         # 低位金叉
-        self.calculateMacdInfo(context,data,security)
+        self.calculateMacdInfo(context,security,curPrice,factor)
         list = self.getLastTradeDayMacd(security,3)
         if(list and len(list)>2):
             prePreInfo = list[0]
             preInfo = list[1]
             curInfo = list[2]
-            self.util.logPrint("isMacdGoldCross,curInfo:%s,preInfo:%s,dea:%s"
-                            , curInfo["macd"],preInfo["macd"],curInfo["dea"])
+            # self.util.logPrint("isMacdLowGoldCross,curInfo:%s,preInfo:%s,dea:%s"
+            #                 , curInfo["macd"],preInfo["macd"],curInfo["dea"])
 
             if((preInfo["macd"] <0 and curInfo["macd"] >0 and curInfo["dea"]<0)
              or (prePreInfo["macd"]<=0 and preInfo["macd"] == 0 and curInfo["macd"] >0 and curInfo["dea"]<0)):
@@ -72,22 +72,22 @@ class MyMacd:
                 return True  
         return False
         
-    def isMacdHightGoldCross(self,context,data,security):
+    def isMacdHightGoldCross(self,context,security,curPrice,factor):
         pass
 
-    def isMacdLowDeathCross(self,context,data,security):
+    def isMacdLowDeathCross(self,context,security,curPrice,factor):
         pass
 
-    def isMacdHightDeathCross(self,context,data,security):
+    def isMacdHightDeathCross(self,context,security,curPrice,factor):
         #高位死叉
-        self.calculateMacdInfo(context,data,security)
+        self.calculateMacdInfo(context,security,curPrice,factor)
         list = self.getLastTradeDayMacd(security,3)
         if(list and len(list)>2):
             prePreInfo = list[0]
             preInfo = list[1]
             curInfo = list[2]
-            self.util.logPrint("isMacdGoldCross,curInfo:%s,preInfo:%s,dea:%s"
-                            , curInfo["macd"],preInfo["macd"],curInfo["dea"])
+            # self.util.logPrint("isMacdHightDeathCross,curInfo:%s,preInfo:%s,dea:%s"
+            #                 , curInfo["macd"],preInfo["macd"],curInfo["dea"])
 
             if((preInfo["macd"] >0 and curInfo["macd"] < 0 and curInfo["dea"]>0)
              or (prePreInfo["macd"]>=0 and preInfo["macd"] == 0 and curInfo["macd"] < 0 and curInfo["dea"]>0)):
@@ -95,15 +95,7 @@ class MyMacd:
                 return True  
         return False
 
-    def calculateMacdInfo(self,context,data,security):
-        dict = data[security]
-        factor = 1.0
-        if(not dict.isnan() and not dict.paused):
-            curPrice = dict.close
-            factor =  dict.factor 
-        else:
-            return None
-
+    def calculateMacdInfo(self,context,security,curPrice,factor):
         if(not factor == 1.0):
             self.removeTradeDayMacd(security)   
             self.util.logPrint ("除权factor:%s，重新计算macd",factor)

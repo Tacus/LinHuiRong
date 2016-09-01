@@ -22,19 +22,11 @@ class AdjustTimes:
         self.highDict = {}
         self.util = MyUtil(enableLog)
     
-    def getTimesOfAdjust(self,context,data,security):
-        dict = data[security]
-        #今天停盘还是昨天停盘
-        if(not dict.isnan() and not dict.paused):
-            curPrice = dict.close
-            factor =  dict.factor
-            if(not factor == 1.0):
-                self.removeHighDict(security)
-                self.util.logPrint ("除权factor:%s，重新计算调整次数"%factor)
-        else:
-            return
+    def getTimesOfAdjust(self,context,security,curPrice,factor):     
+        if(not factor == 1.0):
+            self.removeHighDict(security)
+            self.util.logPrint ("除权factor:%s，重新计算调整次数"%factor)
         
-        current_price =  data[security].high
         highDict = self.getHighDict(security)
         if highDict:
             lastRet = highDict['lastRet']
@@ -46,14 +38,14 @@ class AdjustTimes:
             start_date = current_date + timedelta(1)
             timeDt = context.current_dt.date() - current_date
             if(timeDt.days >= 0):
-                if current_price>=maxPrice:
+                if curPrice>=maxPrice:
                     highDict['lastRet'] = True
                     highDict['adjustTimes'] = 0
-                    highDict['lastAdjustPrice'] = current_price
-                    highDict['maxPrice']=current_price
+                    highDict['lastAdjustPrice'] = curPrice
+                    highDict['maxPrice']=curPrice
                     highDict['endDate'] = context.current_dt.date() - timedelta(1)
                     highDict['maxDate'] = context.current_dt.date() - timedelta(1)
-                    self.util.logPrint ('code:%s, preMaxPrice:%s,current_price:%s,创回测开始日前三个月以来新高，重新计算调整',security,maxPrice,current_price)
+                    self.util.logPrint ('code:%s, preMaxPrice:%s,curPrice:%s,创回测开始日前三个月以来新高，重新计算调整',security,maxPrice,curPrice)
                     return
                 elif(adjustTimes > self.buyAdjustTimes):
                     self.util.logPrint ('调整次数超%s次~！',self.buyAdjustTimes)
@@ -87,12 +79,12 @@ class AdjustTimes:
             if not pd.isnull(index):
                 price = df.high[index]
                 self.util.logPrint ("Code:%s,maxPrice Date:%s" ,security,str(index.date()))
-                if current_price >= price:
+                if curPrice >= price:
                     highDict = {}
                     highDict['lastRet'] = True
                     highDict['adjustTimes'] = 0
-                    highDict['lastAdjustPrice'] = current_price
-                    highDict['maxPrice']=current_price
+                    highDict['lastAdjustPrice'] = curPrice
+                    highDict['maxPrice']=curPrice
                     highDict['endDate'] = end_date
                     highDict['maxDate'] = context.current_dt.date() - timedelta(1)
                     self.highDict[security] = highDict
