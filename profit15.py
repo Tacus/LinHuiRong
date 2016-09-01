@@ -22,7 +22,7 @@ def initialize(context):
 	
 	#卖出的盈利比例
 	
-	g.macd = MyMacd(False,macdFiled = "close")
+	g.macd = MyMacd(False)
 	g.adjustTims  = AdjustTimes(False)
 	g.util = MyUtil()
 	g.buyStrategy = BuyStrategy(g.macd,g.adjustTims)
