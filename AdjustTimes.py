@@ -40,7 +40,6 @@ class AdjustTimes:
 			if(timeDt.days >= 0):
 				if curPrice>=maxPrice:
 					bRet = self.compareAvg(security,end_date)
-
 					highDict['lastRet'] = bRet
 					highDict['adjustTimes'] = 0
 					highDict['lastAdjustPrice'] = curPrice
@@ -83,7 +82,6 @@ class AdjustTimes:
 				if curPrice >= price:
 					highDict = {}
 					bRet = self.compareAvg(security,end_date)
-
 					highDict['lastRet'] = bRet
 					highDict['adjustTimes'] = 0
 					highDict['lastAdjustPrice'] = curPrice
