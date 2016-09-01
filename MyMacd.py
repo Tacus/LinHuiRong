@@ -112,7 +112,7 @@ class MyMacd:
 			start_date = lastDate + timedelta(1)
 			end_date = context.current_dt.date() - timedelta(1)
 			# timeDt = end_date - start_date
-			timeDt = context.current_dt.date() - lastDate - timedelta(1)
+			timeDt = end_date - lastDate
 			#周一情况
 			if(timeDt.days >= 0):
 				df = get_price(security, start_date = start_date ,end_date=end_date, fields=[self.macdFiled], skip_paused=True)
@@ -163,10 +163,10 @@ class MyMacd:
 		currentDea = lastDea*(1-self.deaModulus) + currentDiff*self.deaModulus
 		currentMacd = 2*(currentDiff - currentDea)
 
-		currentSlowEma = round(currentSlowEma,4)
-		currentFastEma = round(currentFastEma,4)
-		currentDea = round(currentDea,4)
-		currentMacd = round(currentMacd,4)
+		# currentSlowEma = round(currentSlowEma,3)
+		# currentFastEma = round(currentFastEma,3)
+		currentDea = round(currentDea,3)
+		currentMacd = round(currentMacd,3)
 		return currentSlowEma,currentFastEma,currentDea,currentMacd
 		
 		
