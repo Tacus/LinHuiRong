@@ -50,9 +50,4 @@ class BuyStrategy:
 		        perCash = 1.0/(self.maxBuyStocks - curTotalSts)
 		        count = context.portfolio.cash*perCash/ curPrice
 		        order(security, count)
-		        sellCtDict = {}
-		        sellCtDict["buyDate"] = context.current_dt.date()
-		        sellCtDict["adjustTime"] = 0
-		        sellCtDict["endDate"] = context.current_dt.date()
-		        sellCtDict["lastRet"] = True
-		        self.sellCtDict[security] = sellCtDict
+		        return True
