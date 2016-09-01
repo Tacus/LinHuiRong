@@ -1,3 +1,4 @@
+# coding=utf-8
 import pandas as pd
 import datetime
 from datetime import *
@@ -9,7 +10,7 @@ class BuyStrategy:
 		self.adjustTimeCls = adjustTimeCls
 		self.buyAdjustTime = 6
 		self.util = MyUtil()
-	    self.volumeRatio = 0.1
+		self.volumeRatio = 0.1
 		self.maxBuyStocks = 10
 
 	def commonBuyStrategy(self,context,security,curPrice,factor):

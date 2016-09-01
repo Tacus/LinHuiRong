@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 # import matplotlib as talib
@@ -5,6 +6,8 @@ import talib
 import datetime
 from  MyMacd import *
 from AdjustTimes import *
+from SellStrategy_threeFiveAvgCross import *
+from BuyStrategy import *
 from MyUtil import *
 from jqdata import *
 def initialize(context):

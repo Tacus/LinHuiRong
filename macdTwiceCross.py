@@ -5,6 +5,8 @@ import talib
 import datetime
 from  MyMacd import *
 from AdjustTimes import *
+from BuyStrategy import *
+from SellStrategy_MacdTwiceCross import *
 from MyUtil import *
 from jqdata import *
 def initialize(context):

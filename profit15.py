@@ -6,6 +6,8 @@ import datetime
 from  MyMacd import *
 from AdjustTimes import *
 from MyUtil import *
+from BuyStrategy import *
+from SellStrategy_ProfitOrLoss15 import *
 from jqdata import *
 def initialize(context):
     # 定义一个全局变量, 保存要操作的股票
@@ -25,11 +27,7 @@ def initialize(context):
     g.util = MyUtil()
     g.buyStrategy = BuyStrategy(g.macd,g.adjustTims)
     g.sellStrategy = SellStrategy_ProfitOrLoss15()
-
-    g.sellAdjustTime = 3
-    g.sellFastAvgDays= 3
-    g.sellSlowAvgDays= 5
-
+    
 # 每个单位时间(如果按天回测,则每天调用一次,如果按分钟,则每分钟调用一次)调用一次
 def handle_data(context, data):
     # securities = g.security
