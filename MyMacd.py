@@ -10,7 +10,6 @@ from kuanke.user_space_api import *
 class MyMacd:
 	# 实测环境每天执行 ，handler_data 9.30调用 则只能取到昨天价格
 	# macdFiled = 'close'
-	# curMacdFiled = "open"
 	# macdSlowEmaModulus = 26.0
 	# macdFastEmaModulus = 12.0
 	# macdDEAModulus = 9.0
@@ -23,11 +22,10 @@ class MyMacd:
 	deathCountDict = {}
 	macdDict = {}
 
-	def __init__(self,enableLog = True,macdFiled = "close",curMacdFiled = "open",macdFastEmaModulus = 12.0,macdSlowEmaModulus = 26.0,
+	def __init__(self,enableLog = True,macdFiled = "close",macdFastEmaModulus = 12.0,macdSlowEmaModulus = 26.0,
 		macdDEAModulus = 9.0,macdM = 2.0,macdPeriod = 120,maxCache = 60):
 		self.macdFiled = macdFiled
 		# 实测环境每天执行 ，handler_data 9.30调用 则只能取到昨天价格
-		self.curMacdFiled = curMacdFiled
 		self.macdSlowEmaModulus = macdSlowEmaModulus
 		self.macdFastEmaModulus = macdFastEmaModulus
 		self.macdDEAModulus = macdDEAModulus
