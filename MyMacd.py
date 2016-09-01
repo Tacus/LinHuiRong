@@ -9,7 +9,7 @@ from kuanke.user_space_api import *
 # TODO 新 上 market days < period 有nan 产生
 class MyMacd:
 	# 实测环境每天执行 ，handler_data 9.30调用 则只能取到昨天价格
-	# macdFiled = 'close'
+	# macdField = 'close'
 	# macdSlowEmaModulus = 26.0
 	# macdFastEmaModulus = 12.0
 	# macdDEAModulus = 9.0
@@ -22,9 +22,9 @@ class MyMacd:
 	deathCountDict = {}
 	macdDict = {}
 
-	def __init__(self,enableLog = True,macdFiled = "close",macdFastEmaModulus = 12.0,macdSlowEmaModulus = 26.0,
+	def __init__(self,enableLog = True,macdField = "close",macdFastEmaModulus = 12.0,macdSlowEmaModulus = 26.0,
 		macdDEAModulus = 9.0,macdM = 2.0,macdPeriod = 120,maxCache = 60):
-		self.macdFiled = macdFiled
+		self.macdField = macdField
 		# 实测环境每天执行 ，handler_data 9.30调用 则只能取到昨天价格
 		self.macdSlowEmaModulus = macdSlowEmaModulus
 		self.macdFastEmaModulus = macdFastEmaModulus
@@ -115,8 +115,8 @@ class MyMacd:
 			timeDt = end_date - lastDate
 			#周一情况
 			if(timeDt.days >= 0):
-				df = get_price(security, start_date = start_date ,end_date=end_date, fields=[self.macdFiled], skip_paused=True)
-				avgs = df[self.macdFiled]
+				df = get_price(security, start_date = start_date ,end_date=end_date, fields=[self.macdField], skip_paused=True)
+				avgs = df[self.macdField]
 				for i in range(len(avgs)):
 					 # self.util.logPrint ("currentSlowEma:%s,currentFastEma:%s,currentDea:%s" ,currentSlowEma,currentFastEma,currentDea)
 					date = avgs.index[i].date()
@@ -134,22 +134,22 @@ class MyMacd:
 			startDate = dict.start_date
 			days = end_date - startDate 
 			if days.days < self.macdPeriod:
-				df = get_price(security, start_date = startDate ,end_date=end_date, fields=self.macdFiled, skip_paused=True)
+				df = get_price(security, start_date = startDate ,end_date=end_date, fields=self.macdField, skip_paused=True)
 			else:
-				df = get_price(security, end_date=end_date, fields=self.macdFiled, skip_paused=True,count=self.macdPeriod)
-			avgs = df[self.macdFiled]
+				df = get_price(security, end_date=end_date, fields=self.macdField, skip_paused=True,count=self.macdPeriod)
+			avgs = df[self.macdField]
 			for i in range(len(avgs)):
 				curHisPrice = avgs[i]
 				if i==0:
 					currentSlowEma = curHisPrice
 					currentFastEma = curHisPrice
 					# pass
-				elif i == 1:
-					currentSlowEma = currentSlowEma + (curHisPrice - currentSlowEma) * self.slowModulus
-					currentFastEma = currentFastEma + (curHisPrice - currentFastEma) * self.fastModulus
-					currentDiff =  currentFastEma - currentSlowEma
-					currentDea = currentDea + currentDiff*self.deaModulus
-					currentMacd = 2*(currentDiff - currentDea)
+				# elif i == 1:
+				# 	currentSlowEma = currentSlowEma + (curHisPrice - currentSlowEma) * self.slowModulus
+				# 	currentFastEma = currentFastEma + (curHisPrice - currentFastEma) * self.fastModulus
+				# 	currentDiff =  currentFastEma - currentSlowEma
+				# 	currentDea = currentDea + currentDiff*self.deaModulus
+				# 	currentMacd = 2*(currentDiff - currentDea)
 				else:
 					currentSlowEma,currentFastEma,currentDea,currentMacd = self.caculateMacd(currentSlowEma,currentFastEma,currentDea,curHisPrice)
 					# self.util.logPrint ("currentSlowEma:%s,currentFastEma:%s,currentMacd:%s" ,currentSlowEma,currentFastEma,currentMacd)
