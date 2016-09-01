@@ -24,7 +24,7 @@ def initialize(context):
 	g.util = MyUtil()
 	g.buyStrategy = BuyStrategy(g.macd,g.adjustTims)
 	g.buyCtDict = {}
-	g.sellStrategy = SellStrategy_threeFiveAvgCross(g.buyCtDict,g.macd,g.adjustTims)
+	g.sellStrategy = SellStrategy_threeFiveAvgCross(g.buyCtDict,g.macd)
 
 # 每个单位时间(如果按天回测,则每天调用一次,如果按分钟,则每分钟调用一次)调用一次
 def handle_data(context, data):
