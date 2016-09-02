@@ -26,6 +26,7 @@ def initialize(context):
 	g.adjustTimeCls  = AdjustTimes(False)
 	g.util = MyUtil()		
 	g.buyStrategy = BuyStrategy(g.macdCls,g.adjustTimeCls)
+
 	g.sellStrategy = SellStrategy_ProfitOrLoss15()
 	
 # 每个单位时间(如果按天回测,则每天调用一次,如果按分钟,则每分钟调用一次)调用一次
