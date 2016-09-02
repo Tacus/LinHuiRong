@@ -22,11 +22,12 @@ class AdjustTimes:
 		self.highDict = {}
 		self.util = MyUtil(enableLog)
 	
-	def getTimesOfAdjust(self,context,security,curPrice,factor):	 
+	def getTimesOfAdjust(self,context,security,factor):	 
 		if(not factor == 1.0):
 			self.removeHighDict(security)
 			self.util.logPrint ("除权factor:%s，重新计算调整次数"%factor)
 		
+		end_date = context.current_dt.date() - timedelta(1)
 		highDict = self.getHighDict(security)
 		if highDict:
 			lastRet = highDict['lastRet']
@@ -34,28 +35,59 @@ class AdjustTimes:
 			lastAdjustPrice = highDict['lastAdjustPrice']
 			maxPrice =  highDict['maxPrice']
 			current_date = highDict['endDate']
-			end_date = context.current_dt.date() - timedelta(1)
 			start_date = current_date + timedelta(1)
-			timeDt = context.current_dt.date() - current_date
+
+			df = get_price(security, start_date = start_date ,end_date=end_date, fields='high', skip_paused=True)
+
+			index = df.high.argmax()
+			curMaxPrice = df.high.max()
+
 			if(timeDt.days >= 0):
-				if curPrice>=maxPrice:
-					bRet = self.compareAvg(security,end_date)
+
+				dateList = df.high.index.tolist()
+				start = dateList.index(index)
+
+				bRet = self.compareAvg(security,end_date)
+
+				if(curMaxPrice >= maxPrice):
+					self.util.logPrint ('code:%s, preMaxPrice:%s,curMaxPrice:%s,创回测开始日前三个月以来新高，重新计算调整',security,maxPrice,curMaxPrice)
+					if(start == len(dateList)):
+						highDict['lastRet'] = bRet
+						highDict['adjustTimes'] = 0
+						highDict['lastAdjustPrice'] = 0
+						highDict['maxPrice'] = curMaxPrice
+						highDict['endDate'] = end_date
+						highDict['maxDate'] = index.date()
+						return 0
+					else:
+						start = start +1
+						calculateDateList = self.getTradeDateList(start,dateList)
+						lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,calculateDateList,bRet,0,curMaxPrice)
+						
+						highDict['lastRet'] = lastRet
+						highDict['adjustTimes'] = adjustTimes
+						highDict['lastAdjustPrice'] = lastAdjustPrice
+						highDict['maxPrice'] = curMaxPrice
+						highDict['endDate'] = end_date
+						highDict['maxDate'] = index.date()
+						return 	adjustTimes	
+				elif(adjustTimes > self.buyAdjustTimes):
+
+					self.util.logPrint ('调整次数超%s次~！',self.buyAdjustTimes)
+					self.removeHighDict(security)
+					#TODO 重新计算调整次数
+					return 0
+				else:									
+
+					self.util.logPrint( "中继计算：security：%s,endDate：%s,lastRet：%s,adjustTimes%s",security,current_date,lastRet,adjustTimes)
 					highDict['lastRet'] = bRet
 					highDict['adjustTimes'] = 0
 					highDict['lastAdjustPrice'] = curPrice
 					highDict['maxPrice']=curPrice
 					highDict['endDate'] = end_date
 					highDict['maxDate'] = end_date
-					self.util.logPrint ('code:%s, preMaxPrice:%s,curPrice:%s,创回测开始日前三个月以来新高，重新计算调整',security,maxPrice,curPrice)
 					return
-				elif(adjustTimes > self.buyAdjustTimes):
-					self.util.logPrint ('调整次数超%s次~！',self.buyAdjustTimes)
-					self.removeHighDict(security)
-					#TODO 重新计算调整次数
-					return
-				self.util.logPrint( "中继计算：security：%s,endDate：%s,lastRet：%s,adjustTimes%s",security,current_date,lastRet,adjustTimes)
-				
-				df = get_price(security, start_date = start_date ,end_date=end_date, fields='high', skip_paused=True)
+								
 				dateList = df.high.index.tolist()
 				calculateDateList = self.getTradeDateList(dateList[0],dateList)
 				lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,calculateDateList,lastRet,adjustTimes,lastAdjustPrice)
@@ -66,8 +98,6 @@ class AdjustTimes:
 				highDict['endDate'] = end_date
 			return adjustTimes
 		else:
-
-			end_date = context.current_dt.date() - timedelta(1)
 			dict = get_security_info(security)
 			startDate = dict.start_date
 			days = end_date - startDate 
@@ -77,39 +107,36 @@ class AdjustTimes:
 				df = get_price(security, end_date=end_date, fields='high', skip_paused=True,count=self.period)
 			index = df.high.argmax()
 			if not pd.isnull(index):
-				price = df.high[index]
+				maxPrice = df.high[index]
 				self.util.logPrint ("Code:%s,maxPrice Date:%s" ,security,str(index.date()))
-				if curPrice >= price:
-					highDict = {}
-					bRet = self.compareAvg(security,end_date)
-					highDict['lastRet'] = bRet
-					highDict['adjustTimes'] = 0
-					highDict['lastAdjustPrice'] = curPrice
-					highDict['maxPrice']=curPrice
-					highDict['endDate'] = end_date
-					highDict['maxDate'] = end_date
-					self.highDict[security] = highDict
-				else:
-					#记录当前均价
-					# curAdjustPrice = get_price(security,end_date = index,frequency ='1d', fields = ['high'],count = 5)
-					# curAdjustPrice = max(curAdjustPrice.high)
-					dateList = df.high.index.tolist()
-					i = dateList.index(index)
-					start = dateList[i+1]
-					calculateDateList = self.getTradeDateList(start,dateList)
 
-					bRet = self.compareAvg(security,index)
-					lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,calculateDateList,bRet,0,price)
+				bRet = self.compareAvg(security,index)
+				dateList = df.high.index.tolist()
+				start = dateList.index(index)
+				if(start == len(dateList)):
 					highDict = {}
 					highDict['lastRet'] = lastRet
-					highDict['adjustTimes'] = adjustTimes
-					highDict['lastAdjustPrice'] = lastAdjustPrice
-					highDict['maxPrice'] = price
+					highDict['adjustTimes'] = 0
+					highDict['lastAdjustPrice'] = 0
+					highDict['maxPrice'] = maxPrice
 					highDict['endDate'] = end_date
 					highDict['maxDate'] = index.date()
 					self.highDict[security] = highDict
-					# self.setHighDict(security,lastRet,adjustTimes,lastAdjustPrice)
-					return adjustTimes
+					return 0
+				else:
+					start = start +1
+				calculateDateList = self.getTradeDateList(start,dateList)
+				lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,calculateDateList,bRet,0,maxPrice)
+				highDict = {}
+				highDict['lastRet'] = lastRet
+				highDict['adjustTimes'] = adjustTimes
+				highDict['lastAdjustPrice'] = lastAdjustPrice
+				highDict['maxPrice'] = maxPrice
+				highDict['endDate'] = end_date
+				highDict['maxDate'] = index.date()
+				self.highDict[security] = highDict
+				# self.setHighDict(security,lastRet,adjustTimes,lastAdjustPrice)
+				return adjustTimes
 
 	def compareAvg(self,security,current_date):
 		dfTen = get_price(security,frequency='1d',end_date = current_date , fields='avg', count=self.slowAvgDays,skip_paused=True)
