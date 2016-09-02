@@ -22,10 +22,10 @@ def initialize(context):
 	
 	#卖出的盈利比例
 	
-	g.macd = MyMacd(False,macdFiled = "close")
-	g.adjustTims  = AdjustTimes(False)
-	g.util = MyUtil()
-	g.buyStrategy = BuyStrategy(g.macd,g.adjustTims)
+	g.macdCls = MyMacd(False,macdFiled = "close")
+	g.adjustTimeCls  = AdjustTimes(False)
+	g.util = MyUtil()		
+	g.buyStrategy = BuyStrategy(g.macdCls,g.adjustTimeCls)
 	g.sellStrategy = SellStrategy_ProfitOrLoss15()
 	
 # 每个单位时间(如果按天回测,则每天调用一次,如果按分钟,则每分钟调用一次)调用一次
@@ -34,13 +34,14 @@ def handle_data(context, data):
 	# for security in securities:
 	# security = '002573.XSHE'
 	
-	# g.macd.isMacdLowGoldCross(context, data,security)
-	# tmp = g.macd.getAllTradeDayMacd(security)
+	# g.macdCls.isMacdLowGoldCross(context, data,security)
+	# tmp = g.macdCls.getAllTradeDayMacd(security)
 	# print tmp
 	# return
-	# g.adjustTims.getTimesOfAdjust(context, data,security)
-	# tmp = g.adjustTims.getHighDict(security)
-	# print tmp	
+	# g.adjustTimeCls.getTimesOfAdjust(context, data,security)
+	# tmp = g.adjustTimeCls.getHighDict(security)
+	# print tmp	  
+			
 	buyStocksMethod(context,data)
 	sellStocksMethod(context,data) 
 def buyStocksMethod(context,data):
