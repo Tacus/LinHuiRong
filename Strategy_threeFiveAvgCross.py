@@ -37,7 +37,7 @@ def buyStocksMethod(context,data):
 		curPrice = dict.close
 		factor = dict.factor
 		if(not dict.isnan() and not dict.paused):
-			isBuy = g.buyStrategy.commonBuyStrategy(context,security,curPrice,factor)
+			isBuy = g.buyStrategy.commonBuyStrategy(context,security,factor)
 			if isBuy:
 				buyCtDict = {}
 				buyCtDict["buyDate"] = context.current_dt.date()
