@@ -13,7 +13,7 @@ class BuyStrategy:
 		self.volumeRatio = 0.1
 		self.maxBuyStocks = 10
 
-	def commonBuyStrategy(self,context,security,curPrice,factor):
+	def commonBuyStrategy(self,context,security,factor):
 		if security in context.portfolio.positions:
 			self.util.logPrint("code:%s 已持仓",security)
 			return
@@ -22,23 +22,24 @@ class BuyStrategy:
 		if curTotalSts == self.maxBuyStocks:
 			self.util.logPrint("code:%s 已满仓",security)			
 			return
-		adjustTimes = self.adjustTimeCls.getTimesOfAdjust(context,security,curPrice,factor)
+		adjustTimes = self.adjustTimeCls.getTimesOfAdjust(context,security,factor)
 		# self.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
 		if not adjustTimes== None:
 			buyFit = adjustTimes == self.buyAdjustTime
 			if(not buyFit):
-				return
+				return		
 		end_date = context.current_dt.date() - timedelta(1)
+		curPrice = get_price(security,end_date = end_date,frequency ='1d', fields = 'close',count = 1,skip_paused=True)
+
 		tenVolume = get_price(security,end_date = end_date,frequency ='1d', fields = ['volume'],count = 10,skip_paused=True)
 		volumeRatioTen = tenVolume['volume'].sum()/10
 		fiveVolume = get_price(security,end_date = end_date,frequency ='1d', fields = ['volume'],count = 5,skip_paused=True)
-		# if 
 		volumeRatioFive = fiveVolume['volume'].sum()/5
 		if volumeRatioTen ==0 :
 			self.util.logPrint( '十日均线为0 code:%s', security)
 			volumeRatioTen = 1
 		if(volumeRatioFive/volumeRatioTen > self.volumeRatio):
-			macdFit = self.macdCls.isMacdLowGoldCross(context,security,curPrice,factor)
+			macdFit = self.macdCls.isMacdLowGoldCross(context,security,factor)
 			self.util.logPrint("code:%s,volumeRation:%s,macdFit:%s",security,volumeRatioFive/volumeRatioTen,str(macdFit))
 			if(macdFit):
 				#20天均线上扬

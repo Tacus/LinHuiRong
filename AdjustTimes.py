@@ -5,16 +5,16 @@ from datetime import *
 from MyUtil import *
 from kuanke.user_space_api import *
 class AdjustTimes:
-	period = 120
-	buyAdjustTimes = 6
-	fMinDownRatio = 0.15
-	sMinDownRatio = 0.1
-	fastAvgDays = 5
-	slowAvgDays = 10
+	# period = 120
+	# buyAdjustTimes = 6
+	# fMinDownRatio = 0.15
+	# sMinDownRatio = 0.1
+	# fastAvgDays = 5
+	# slowAvgDays = 10
 	highDict = {}
-	def __init__(self,enableLog = True,period = 120,buyAdjustTimes = 6,fMinDownRatio = 0.15,sMinDownRatio = 0.1,fastAvgDays = 5,slowAvgDays = 10):
+	def __init__(self,enableLog = True,period = 120,clearAdjustTimes = 15,fMinDownRatio = 0.15,sMinDownRatio = 0.1,fastAvgDays = 5,slowAvgDays = 10):
 		self.period = period
-		self.buyAdjustTimes = buyAdjustTimes
+		self.clearAdjustTimes = clearAdjustTimes
 		self.fMinDownRatio = fMinDownRatio
 		self.sMinDownRatio = sMinDownRatio
 		self.fastAvgDays = fastAvgDays
@@ -38,12 +38,9 @@ class AdjustTimes:
 			start_date = current_date + timedelta(1)
 
 			df = get_price(security, start_date = start_date ,end_date=end_date, fields='high', skip_paused=True)
-
-			index = df.high.argmax()
-			curMaxPrice = df.high.max()
-
-			if(timeDt.days >= 0):
-
+			if(len(df) > 0):
+				index = df.high.argmax()
+				curMaxPrice = df.high.max()
 				dateList = df.high.index.tolist()
 				start = dateList.index(index)
 
@@ -71,32 +68,25 @@ class AdjustTimes:
 						highDict['endDate'] = end_date
 						highDict['maxDate'] = index.date()
 						return 	adjustTimes	
-				elif(adjustTimes > self.buyAdjustTimes):
+				elif(adjustTimes > self.clearAdjustTimes):
 
-					self.util.logPrint ('调整次数超%s次~！',self.buyAdjustTimes)
+					self.util.logPrint ('调整次数超%s次~！',self.clearAdjustTimes)
 					self.removeHighDict(security)
 					#TODO 重新计算调整次数
-					return 0
-				else:									
-
-					self.util.logPrint( "中继计算：security：%s,endDate：%s,lastRet：%s,adjustTimes%s",security,current_date,lastRet,adjustTimes)
-					highDict['lastRet'] = bRet
-					highDict['adjustTimes'] = 0
-					highDict['lastAdjustPrice'] = curPrice
-					highDict['maxPrice']=curPrice
+					return adjustTimes
+				else:
+					# dateList = df.high.index.tolist()
+					# calculateDateList = self.getTradeDateList(dateList[0],dateList)
+					lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,dateList,lastRet,adjustTimes,lastAdjustPrice)
+					
+					highDict['lastRet'] = lastRet
+					highDict['adjustTimes'] = adjustTimes
+					highDict['lastAdjustPrice'] = lastAdjustPrice
 					highDict['endDate'] = end_date
-					highDict['maxDate'] = end_date
-					return
-								
-				dateList = df.high.index.tolist()
-				calculateDateList = self.getTradeDateList(dateList[0],dateList)
-				lastRet,adjustTimes,lastAdjustPrice = self.calculatePreTimeOfAdjust(security,calculateDateList,lastRet,adjustTimes,lastAdjustPrice)
-				
-				highDict['lastRet'] = lastRet
-				highDict['adjustTimes'] = adjustTimes
-				highDict['lastAdjustPrice'] = lastAdjustPrice
-				highDict['endDate'] = end_date
-			return adjustTimes
+					return adjustTimes
+			else:
+				self.util.logPrint("security:%s has calculated;",security)
+				return adjustTimes
 		else:
 			dict = get_security_info(security)
 			startDate = dict.start_date
@@ -146,7 +136,6 @@ class AdjustTimes:
 		return avgFive - avgTen >0
 
 	def calculatePreTimeOfAdjust(self,security,calculateDateList,lastResult,current_adjustTimes,lastAdjustPrice = None):
-
 		for i in range(len(calculateDateList)):
 			current_date = calculateDateList[i]	  
 			bRet = lastResult
@@ -215,7 +204,7 @@ class AdjustTimes:
 			return self.highDict[security]
 
 	@staticmethod
-	def getTradeDateList(startObj,dataList):
-		index = dataList.index(startObj)
-		ret = dataList[index:]
+	def getTradeDateList(start,dataList):
+		# index = dataList.index(startObj)
+		ret = dataList[start:]
 		return ret

@@ -53,9 +53,9 @@ class MyMacd:
 				return True  
 		return False
 
-	def isMacdLowGoldCross(self,context,security,curPrice,factor):
+	def isMacdLowGoldCross(self,context,security,factor):
 		# 低位金叉
-		self.calculateMacdInfo(context,security,curPrice,factor)
+		self.calculateMacdInfo(context,security,factor)
 		list = self.getLastTradeDayMacd(security,3)
 		if(list and len(list)>2):
 			prePreInfo = list[0]
@@ -70,15 +70,15 @@ class MyMacd:
 				return True  
 		return False
 		
-	def isMacdHightGoldCross(self,context,security,curPrice,factor):
+	def isMacdHightGoldCross(self,context,security,factor):
 		pass
 
-	def isMacdLowDeathCross(self,context,security,curPrice,factor):
+	def isMacdLowDeathCross(self,context,security,factor):
 		pass
 
-	def isMacdHightDeathCross(self,context,security,curPrice,factor):
+	def isMacdHightDeathCross(self,context,security,factor):
 		#高位死叉
-		self.calculateMacdInfo(context,security,curPrice,factor)
+		self.calculateMacdInfo(context,security,factor)
 		list = self.getLastTradeDayMacd(security,3)
 		if(list and len(list)>2):
 			prePreInfo = list[0]
@@ -93,7 +93,7 @@ class MyMacd:
 				return True  
 		return False
 
-	def calculateMacdInfo(self,context,security,curPrice,factor):
+	def calculateMacdInfo(self,context,security,factor):
 		if(not factor == 1.0):
 			self.removeTradeDayMacd(security)   
 			self.util.logPrint ("除权factor:%s，重新计算macd",factor)

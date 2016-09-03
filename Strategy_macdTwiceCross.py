@@ -45,7 +45,7 @@ def buyStocksMethod(context,data):
 		curPrice = dict.close
 		factor = dict.factor
 		if(not dict.isnan() and not dict.paused):
-			g.buyStrategy.commonBuyStrategy(context,security,curPrice,factor)
+			g.buyStrategy.commonBuyStrategy(context,security,factor)
 
 def sellStocksMethod(context,data):
 	for security in context.portfolio.positions:
