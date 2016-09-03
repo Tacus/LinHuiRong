@@ -30,7 +30,7 @@ class BuyStrategy:
 				return		
 		end_date = context.current_dt.date() - timedelta(1)
 		curPrice = get_price(security,end_date = end_date,frequency ='1d', fields = 'close',count = 1,skip_paused=True)
-
+		curPrice = curPrice.close[0]
 		tenVolume = get_price(security,end_date = end_date,frequency ='1d', fields = ['volume'],count = 10,skip_paused=True)
 		volumeRatioTen = tenVolume['volume'].sum()/10
 		fiveVolume = get_price(security,end_date = end_date,frequency ='1d', fields = ['volume'],count = 5,skip_paused=True)
