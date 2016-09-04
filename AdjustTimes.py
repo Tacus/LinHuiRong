@@ -161,8 +161,8 @@ class AdjustTimes:
 					if(current_adjustTimes < 5):
 						# self.util.logPrint "非第一次调整并且调整次数小于5"
 						if(bRet):
-							curAdjustPrice = get_price(security,end_date = current_date,frequency ='1d', fields = ['low'],count = 5,skip_paused=True)
-							curAdjustPrice = min(curAdjustPrice.low)
+							curAdjustPrice = get_price(security,end_date = current_date,frequency ='1d', fields = ['avg'],count = 5,skip_paused=True)
+							curAdjustPrice = min(curAdjustPrice.avg)
 							adjustRatio = ( curAdjustPrice - lastAdjustPrice) / lastAdjustPrice
 							adjustRatio = abs(adjustRatio)
 							if current_adjustTimes == 1 and adjustRatio > self.fMinDownRatio:							
@@ -179,8 +179,8 @@ class AdjustTimes:
 						elif not bRet:
 							if current_adjustTimes != 1 and current_adjustTimes != 3:
 								# self.util.logPrint "下跌中的上扬不做幅度判断 符合调整"
-								curAdjustPrice = get_price(security,end_date = current_date,frequency ='1d', fields = ['high'],count = 5,skip_paused=True)
-								curAdjustPrice = max(curAdjustPrice.high)
+								curAdjustPrice = get_price(security,end_date = current_date,frequency ='1d', fields = ['avg'],count = 5,skip_paused=True)
+								curAdjustPrice = max(curAdjustPrice.avg)
 								current_adjustTimes = current_adjustTimes +1
 								self.util.logPrint ("3调整发生了:%s,代码：%s,调整次数:%s" ,str(current_date),security,current_adjustTimes),
 					else:

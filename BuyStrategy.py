@@ -15,13 +15,19 @@ class BuyStrategy:
 
 	def commonBuyStrategy(self,context,security,factor):
 		if security in context.portfolio.positions:
-			self.util.logPrint("code:%s 已持仓",security)
+			# self.util.logPrint("code:%s 已持仓",security)
 			return
 
 		curTotalSts = len(context.portfolio.positions)
 		if curTotalSts == self.maxBuyStocks:
-			self.util.logPrint("code:%s 已满仓",security)			
+			# self.util.logPrint("code:%s 已满仓",security)			
 			return
+
+		df = self.getMarket_Cap(security)
+
+		if len(df) < 1 :
+			return
+			
 		adjustTimes = self.adjustTimeCls.getTimesOfAdjust(context,security,factor)
 		# self.util.logPrint("code:%s,adjustTimes:%s",security,adjustTimes)
 		if not adjustTimes== None:
@@ -53,3 +59,7 @@ class BuyStrategy:
 				count = context.portfolio.cash*perCash/ curPrice
 				order(security, count)
 				return True
+
+	def getMarket_Cap(self,security):
+		queryObj = query(valuation.code,valuation.market_cap).filter(valuation.market_cap<=200,valuation.code==security)
+		return get_fundamentals(queryObj)
