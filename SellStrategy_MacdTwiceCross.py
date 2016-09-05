@@ -13,11 +13,13 @@ class SellStrategy_MacdTwiceCross:
 
 	def sell(self,context,security,factor):		
 		bRet = self.macdCls.isMacdHightDeathCross(context,security,factor)
+		self.util.logPrint("security:%s,isMacdHightDeathCross:%s",security,bRet)
 		if(bRet):
 			count = self.macdCls.getCurDeathCount(security)
 			count = count+1
+			self.util.logPrint("security:%s,DeathCount:%s",security,count)
 			if(count >= 2):
-				order_target(code,0)
+				order_target(security,0)
 				self.macdCls.removeCurDeathCount(security)
 			else:
 				self.macdCls.setCurDeathCount(security,count)
