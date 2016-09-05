@@ -53,6 +53,6 @@ def sellStocksMethod(context,data):
 		if(not dict.isnan() and not dict.paused):
 			curPrice = dict.close
 			factor = dict.factor
-			g.sellStrategy.sell(security,curPrice,factor)
+			g.sellStrategy.sell(context,security,factor)
 		else:
 			continue

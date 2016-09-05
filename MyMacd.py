@@ -36,9 +36,9 @@ class MyMacd:
 		self.deaModulus =  self.macdM/(self.macdDEAModulus+1)
 		self.maxCache = maxCache
 		self.util = MyUtil(enableLog)
-	def isMacdGoldCross(self,context,security,curPrice,factor):
+	def isMacdGoldCross(self,context,security,factor):
 		
-		self.calculateMacdInfo(context,security,curPrice,factor)
+		self.calculateMacdInfo(context,security,factor)
 		list = self.getLastTradeDayMacd(security,3)
 		if(list and len(list)>2):
 			prePreInfo = list[0]

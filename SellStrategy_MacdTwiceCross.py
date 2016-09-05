@@ -11,8 +11,8 @@ class SellStrategy_MacdTwiceCross:
 		self.util = MyUtil()
 		self.volumeRatio = 0.1
 
-	def sell(self,security,curPrice,factor):		
-		bRet = self.macdCls.isMacdHightDeathCross(context,security,curPrice,factor)
+	def sell(self,context,security,factor):		
+		bRet = self.macdCls.isMacdHightDeathCross(context,security,factor)
 		if(bRet):
 			count = self.macdCls.getCurDeathCount(security)
 			count = count+1
