@@ -10,8 +10,8 @@ from BuyStrategy import *
 from SellStrategy_ProfitOrLoss15 import *
 from jqdata import *
 def initialize(context):
-	# 定义一个全局变量, 保存要操作的股票
-	# 000001(股票:平安银行)
+	# 定义一个全局变量, 保存要操作的
+	# 000001(:平安银行)
 	set_option('use_real_price', True)
 	g.security = get_all_securities(["stock"]).index
 	# g.security = get_index_stocks('000300.XSHG')
