@@ -14,8 +14,13 @@ def initialize(context):
 	g.lastingDays = 3
 #下跌幅度控制
 	g.priceFallRt = 0.1
-
+#近N天的量与近一个月最低量相差比值
 	g.volumeFallRt = 0.05
+	
+#最多持仓数
+	g.maxBuyStocks = 10
+	
+	
 
 # continuous price fallDown ;continunous volume fallDown ,continunous money inject
 def handle_data(context, data):
@@ -35,11 +40,15 @@ def handle_data(context, data):
 			volumeRet = True
 			if(volumeRet):
 				start_date = volumeDf.index.tolist()[1]
-				print start_date
-				mFlowDf = get_money_flow([security], start_date, end_date, ["date", "sec_code", "change_pct", "net_amount_main", "net_pct_l", "net_amount_m"])
-				print mFlowDf
-				
-	pass
+				mFlowDf = get_money_flow([security], start_date, end_date, ["net_pct_main"])
+				moneyRet = checkMoneyTrend(mFlowDf.net_pct_main.values)
+				if moneyRet:
+					curTotalSts = len(context.portfolio.positions)
+					perCash = 1.0/(g.maxBuyStocks - curTotalSts)
+					order_target_value(security, perCash)
+	
+	for security in context.portfolio.positions:
+		order_target(security,0)
 
 
 def checkPriceTrend(priceList):
@@ -70,7 +79,9 @@ def checkVolumeTrend(volumeList,minVolume):
 		delta = volumeList[i] - volumeList[i-1]
 		if (delta >0):
 			return False
-		
-	ratio = (endVolume - minVolume)/minVolume
-	if(abs(ratio) <= g.volumeFallRt):
-		return True
+			
+def checkMoneyTrend(moneyList):
+	for i in range(len(moneyList)):		
+		if (moneyList[i] <= 0):
+			return False
+	return  True
