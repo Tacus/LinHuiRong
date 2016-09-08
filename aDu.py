@@ -24,31 +24,34 @@ def initialize(context):
 
 # continuous price fallDown ;continunous volume fallDown ,continunous money inject
 def handle_data(context, data):
+	
 	end_date = context.current_dt - timedelta(1)
 	panel = get_price(g.securities.tolist(), end_date = end_date, fields = ["close","volume"],count = g.lastingDays+1)
 	closeDf = panel.close
 	volumeDf = panel.volume
 
 	for security in closeDf.columns:
-		closeValues = closeDf[security].values
-		volumeValues = volumeDf[security].values
-		priceRet = checkPriceTrend(closeValues)
-		if(priceRet):
-			minVolume = get_price(security, end_date = end_date, fields = "volume",skip_paused = True, count = 30)
-			minVolume = minVolume.volume.min()
-			volumeRet = checkVolumeTrend(volumeValues,minVolume)
-# 			print security
-# 			continue
-			if(volumeRet):
-				start_date = volumeDf.index.tolist()[1]
-				mFlowDf = get_money_flow([security], start_date, end_date, ["net_pct_main","net_pct_m","net_pct_s",])
-				moneyRet = checkMoneyTrend(mFlowDf.net_pct_main.values)
-				# g.util.logPrint()
-				moneyRet = True
-				if moneyRet:
-					curTotalSts = len(context.portfolio.positions)
-					perCash = 1.0/(g.maxBuyStocks - curTotalSts)*context.portfolio.cash
-					order_target_value(security, perCash)
+		curTotalSts = len(context.portfolio.positions)
+		if(curTotalSts <= g.maxBuyStocks):
+			closeValues = closeDf[security].values
+			volumeValues = volumeDf[security].values
+			priceRet = checkPriceTrend(closeValues)
+			if(priceRet):
+				minVolume = get_price(security, end_date = end_date, fields = "volume",skip_paused = True, count = 30)
+				minVolume = minVolume.volume.min()
+				volumeRet = checkVolumeTrend(volumeValues,minVolume)
+	# 			print security
+	# 			continue
+				if(volumeRet):
+					start_date = volumeDf.index.tolist()[1]
+					mFlowDf = get_money_flow([security], start_date, end_date, ["net_pct_main","net_pct_m","net_pct_s",])
+					moneyRet = checkMoneyTrend(mFlowDf.net_pct_main.values)
+					# g.util.logPrint()
+					moneyRet = True
+					if moneyRet:
+						
+						perCash = 1.0/(g.maxBuyStocks - curTotalSts)*context.portfolio.cash
+						order_target_value(security, perCash)
 	
 	for security in context.portfolio.positions:
 		order_target(security,0)
@@ -79,7 +82,7 @@ def checkVolumeTrend(volumeList,minVolume):
 			continue
 		if i == len(volumeList) - 1:
 			endVolume = volumeList
-		print "volumee[%s]:%s,volumee[%s]:%s" %(i, volumeList[i],i-1,volumeList[i-1])
+		# print "volumee[%s]:%s,volumee[%s]:%s" %(i, volumeList[i],i-1,volumeList[i-1])
 		delta = volumeList[i] - volumeList[i-1]
 		if (delta >=0):
 			return False
