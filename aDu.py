@@ -37,14 +37,17 @@ def handle_data(context, data):
 			minVolume = get_price(security, end_date = end_date, fields = "volume",skip_paused = True, count = 30)
 			minVolume = minVolume.volume.min()
 			volumeRet = checkVolumeTrend(volumeValues,minVolume)
-			volumeRet = True
+# 			print security
+# 			continue
 			if(volumeRet):
 				start_date = volumeDf.index.tolist()[1]
-				mFlowDf = get_money_flow([security], start_date, end_date, ["net_pct_main"])
+				mFlowDf = get_money_flow([security], start_date, end_date, ["net_pct_main","net_pct_m","net_pct_s",])
 				moneyRet = checkMoneyTrend(mFlowDf.net_pct_main.values)
+				# g.util.logPrint()
+				moneyRet = True
 				if moneyRet:
 					curTotalSts = len(context.portfolio.positions)
-					perCash = 1.0/(g.maxBuyStocks - curTotalSts)
+					perCash = 1.0/(g.maxBuyStocks - curTotalSts)*context.portfolio.cash
 					order_target_value(security, perCash)
 	
 	for security in context.portfolio.positions:
@@ -75,13 +78,15 @@ def checkVolumeTrend(volumeList,minVolume):
 		if i == 0:
 			continue
 		if i == len(volumeList) - 1:
-			endVolume = volumeList[i]
+			endVolume = volumeList
+		print "volumee[%s]:%s,volumee[%s]:%s" %(i, volumeList[i],i-1,volumeList[i-1])
 		delta = volumeList[i] - volumeList[i-1]
-		if (delta >0):
+		if (delta >=0):
 			return False
+	return True
 			
 def checkMoneyTrend(moneyList):
-	for i in range(len(moneyList)):		
+	for i in range(len(moneyList)):
 		if (moneyList[i] <= 0):
 			return False
 	return  True
