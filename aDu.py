@@ -80,7 +80,7 @@ def checkVolumeTrend(volumeList,minVolume):
 		if i == 0:
 			continue
 		if i == len(volumeList) - 1:
-			endVolume = volumeList
+			endVolume = volumeList[i]
 		# print "volumee[%s]:%s,volumee[%s]:%s" %(i, volumeList[i],i-1,volumeList[i-1])
 		delta = volumeList[i] - volumeList[i-1]
 		if (delta >=0):
