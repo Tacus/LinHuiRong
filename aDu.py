@@ -32,7 +32,7 @@ def handle_data(context, data):
 
 	for security in closeDf.columns:
 		curTotalSts = len(context.portfolio.positions)
-		if(curTotalSts <= g.maxBuyStocks):
+		if(curTotalSts < g.maxBuyStocks):
 			closeValues = closeDf[security].values
 			volumeValues = volumeDf[security].values
 			priceRet = checkPriceTrend(closeValues)
@@ -48,8 +48,7 @@ def handle_data(context, data):
 					moneyRet = checkMoneyTrend(mFlowDf.net_pct_main.values)
 					# g.util.logPrint()
 					moneyRet = True
-					if moneyRet:
-						
+					if moneyRet:						
 						perCash = 1.0/(g.maxBuyStocks - curTotalSts)*context.portfolio.cash
 						order_target_value(security, perCash)
 	
