@@ -85,7 +85,10 @@ def checkVolumeTrend(volumeList,minVolume):
 		delta = volumeList[i] - volumeList[i-1]
 		if (delta >=0):
 			return False
-	return True
+
+	ratio = (endVolume - minVolume)/minVolume
+	if(abs(ratio) <= g.volumeFallRt):
+		return True
 			
 def checkMoneyTrend(moneyList):
 	for i in range(len(moneyList)):
