@@ -2,6 +2,7 @@ import math
 import talib
 import numpy as np
 import pandas as pd
+from jqdata import *
 def initialize(context):
 	g.securities = get_all_securities(["stock"]).index
 	# g.securities = get_all_securities(["stock"])
@@ -31,8 +32,12 @@ def handle_data(context, data):
 			minVolume = get_price(security, end_date = end_date, fields = "volume",skip_paused = True, count = 30)
 			minVolume = minVolume.volume.min()
 			volumeRet = checkVolumeTrend(volumeValues,minVolume)
+			volumeRet = True
 			if(volumeRet):
-				
+				start_date = volumeDf.index.tolist()[1]
+				print start_date
+				mFlowDf = get_money_flow([security], start_date, end_date, ["date", "sec_code", "change_pct", "net_amount_main", "net_pct_l", "net_amount_m"])
+				print mFlowDf
 				
 	pass
 
@@ -40,7 +45,7 @@ def handle_data(context, data):
 def checkPriceTrend(priceList):
 	startPrice = 0
 	endPrice = 0
-	for i in range(len(priceList))
+	for i in range(len(priceList)):
 		if i == 0:
 			startPrice = priceList[i]
 			continue
@@ -57,7 +62,7 @@ def checkPriceTrend(priceList):
 
 def checkVolumeTrend(volumeList,minVolume):
 	endVolume = 0
-	for i in range(len(volumeList))
+	for i in range(len(volumeList)):
 		if i == 0:
 			continue
 		if i == len(volumeList) - 1:
