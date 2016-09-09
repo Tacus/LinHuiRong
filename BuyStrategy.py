@@ -61,5 +61,5 @@ class BuyStrategy:
 				return True
 
 	def getMarket_Cap(self,security):
-		queryObj = query(valuation.code,valuation.market_cap).filter(valuation.market_cap<=200,valuation.code==security)
+		queryObj = query(valuation.code,valuation.market_cap).filter(valuation.market_cap<=100,valuation.code==security)
 		return get_fundamentals(queryObj)
