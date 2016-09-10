@@ -69,7 +69,7 @@ def checkPriceTrend(priceList):
 		if (delta >0):
 			return False
 		
-	ratio = (startPrice - endPrice)/startPrice
+	# ratio = (startPrice - endPrice)/startPrice
 	# if(ratio >= g.priceFallRt):
 	return True
 
