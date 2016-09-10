@@ -47,7 +47,7 @@ def handle_data(context, data):
 					mFlowDf = get_money_flow([security], start_date, end_date, ["net_pct_main","net_pct_m","net_pct_s",])
 					moneyRet = checkMoneyTrend(mFlowDf.net_pct_main.values)
 					# g.util.logPrint()
-					moneyRet = True
+					# moneyRet = True
 					if moneyRet:						
 						perCash = 1.0/(g.maxBuyStocks - curTotalSts)*context.portfolio.cash
 						order_target_value(security, perCash)
@@ -70,8 +70,8 @@ def checkPriceTrend(priceList):
 			return False
 		
 	ratio = (startPrice - endPrice)/startPrice
-	if(ratio >= g.priceFallRt):
-		return True
+	# if(ratio >= g.priceFallRt):
+	return True
 
 
 def checkVolumeTrend(volumeList,minVolume):
@@ -86,9 +86,9 @@ def checkVolumeTrend(volumeList,minVolume):
 		if (delta >=0):
 			return False
 
-	ratio = (endVolume - minVolume)/minVolume
-	if(abs(ratio) <= g.volumeFallRt):
-		return True
+	# ratio = (endVolume - minVolume)/minVolume
+	# if(abs(ratio) <= g.volumeFallRt):
+	return True
 			
 def checkMoneyTrend(moneyList):
 	for i in range(len(moneyList)):
