@@ -25,6 +25,7 @@ def handle_data(context, data):
 	securities = fmtDf.code.values.tolist()
 	# get_current_data()
 	end_date = context.current_dt - timedelta(1)
-	firstPanel = get_price(securities, end_date = end_date, fields = "avg",count = g.firstDays)
-	secondPanel = get_price(securities, end_date = end_date, fields = "avg",count = g.secondDays)
-	thirdPanel = get_price(securities, end_date = end_date, fields = "avg",count = g.thirdDays)
+	firstDf = get_price(securities, end_date = end_date, fields = "avg",count = g.firstDays)
+	secondDf = get_price(securities, end_date = end_date, fields = "avg",count = g.secondDays)
+	thirdDf = get_price(securities, end_date = end_date, fields = "avg",count = g.thirdDays)
+	print firstDf

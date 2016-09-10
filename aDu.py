@@ -3,6 +3,9 @@ import talib
 import numpy as np
 import pandas as pd
 from jqdata import *
+
+# 连续3天下跌，连续3天缩量，连续3天资金净流入
+
 def initialize(context):
 	g.securities = get_all_securities(["stock"]).index
 	# g.securities = get_all_securities(["stock"])
