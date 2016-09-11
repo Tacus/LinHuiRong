@@ -15,9 +15,19 @@ def initialize(context):
 	g.thirdFrequence = "30d"
 
 	g.holderSecurity = '000002.XSHG'
-def handle_data(context, data):
-	
 
+
+	g.maxStocks = 5
+
+	run_monthly(buy_stock, 1,  time='open')
+	run_monthly(sell_stock, 1,  time='open')
+def handle_data(context, data):
+	pass
+
+def sell_stock(context):
+	for security in context.portfolio.positions:
+		order_target(security, 0)
+def buy_stock(context):	
 	queryObj = query(valuation.code,valuation.pcf_ratio,).filter(valuation.pcf_ratio > 0).order_by(
 		# 按市值降序排列
 		valuation.pcf_ratio.desc()
@@ -74,6 +84,7 @@ def handle_data(context, data):
 # 		print mDf.cumsum()
 		
 		tmp = mDf.groupby(['sec_code']).sum()
-		securities = tmp.sort(columns = "net_pct_main",ascending = False).head(5).index
-		for seucurity in securities:
-		    order_target_value(security, value, )
+		securities = tmp.sort(columns = "net_pct_main",ascending = False).head(g.maxStocks).index
+		for security in securities:
+			value = 1./len(securities)*context.portfolio.cash
+			order_target_value(security, value)
