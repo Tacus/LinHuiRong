@@ -67,7 +67,13 @@ def handle_data(context, data):
 		tmpDf = get_price(g.holderSecurity , end_date = end_date,fields = "close",count = 5 )
 		start_date = tmpDf.index[0]
 		mDf = get_money_flow(securities, start_date = start_date, end_date = end_date, fields=["net_pct_main",'sec_code'])
-		mDf = mDf[pd.notnull(mDf.net_pct_main)]
 		mDf = mDf[mDf>0]
-		# mDf = mDf.net_pct_main.values.sum()
-		print mDf.groupby("net_pct_main")
+		mDf = mDf[pd.notnull(mDf.net_pct_main)]
+		
+# 		print mDf.net_pct_main.values
+# 		print mDf.cumsum()
+		
+		tmp = mDf.groupby(['sec_code']).sum()
+		securities = tmp.sort(columns = "net_pct_main",ascending = False).head(5).index
+		for seucurity in securities:
+		    order_target_value(security, value, )
