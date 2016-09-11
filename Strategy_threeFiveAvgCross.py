@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 # import matplotlib as talib
@@ -24,6 +23,9 @@ def initialize(context):
 	g.util = MyUtil()
 	g.buyStrategy = BuyStrategy(g.macd,g.adjustTims)
 	g.buyCtDict = {}
+	
+	g.sellFastAvgDays = 3
+	g.sellSlowAvgDays = 5
 	g.sellStrategy = SellStrategy_threeFiveAvgCross(g.buyCtDict)
 
 # 每个单位时间(如果按天回测,则每天调用一次,如果按分钟,则每分钟调用一次)调用一次
@@ -44,10 +46,10 @@ def buyStocksMethod(context,data):
 				buyCtDict["adjustTime"] = 0
 				end_date = context.current_dt.date() - timedelta(1)
 
-				fastAvg = get_price(security,end_date = end_date, fields = ['avg'],count = self.sellFastAvgDays,skip_paused = True)
-				fastAvg = sum(fastAvg.avg)/self.sellFastAvgDays
-				slowAvg = get_price(security,end_date = end_date, fields = ['avg'],count = self.sellSlowAvgDays,skip_paused = True)
-				slowAvg = sum(slowAvg.avg)/self.sellSlowAvgDays
+				fastAvg = get_price(security,end_date = end_date, fields = ['avg'],count = g.sellFastAvgDays,skip_paused = True)
+				fastAvg = sum(fastAvg.avg)/g.sellFastAvgDays
+				slowAvg = get_price(security,end_date = end_date, fields = ['avg'],count = g.sellSlowAvgDays,skip_paused = True)
+				slowAvg = sum(slowAvg.avg)/g.sellSlowAvgDays
 				bRet = (fastAvg - slowAvg) >0
 				buyCtDict["lastRet"] = bRet
 				g.buyCtDict[security] = buyCtDict 
