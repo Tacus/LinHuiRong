@@ -4,6 +4,7 @@ import numpy as np
 import talib
 import datetime
 
+	# 最近2个交易日的成交均量是最近45个交易日成交均量的2倍
 def initialize(context):
 	set_option('use_real_price', True)
 	g.security = get_all_securities(["stock"]).index
@@ -16,6 +17,7 @@ def initialize(context):
 
 	#倍率
 	g.ratio = 2.0
+
 
 def handle_data(context, data):
 	securities = g.security

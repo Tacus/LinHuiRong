@@ -1,17 +1,9 @@
 import numpy as np
 from math import *
-# arr = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-# arr[5:8] = 12
 
-# print arr[5:8]
-# print arr
 
-lt = range(10)
-# print lt[100:]
-lt[1:3] = [4,2]
-print lt ,lt[:-1]
-# # a = 1+ NaN
-# a = None
-# # print np.isNull(a)
-# a = randn(10)
-# print a
+def initialize(context): 
+	securities1 = get_index_stocks("000001.XSHG")
+	securities2 = get_index_stocks("000002.XSHG")
+	securities3 = get_all_securities(types="stock").index
+	print type(securities1),len(securities1),type(securities2),len(securities2),type(securities3),len(securities3),
