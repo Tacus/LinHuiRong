@@ -5,7 +5,8 @@ import pandas as pd
 from jqdata import *
 from dateutil.relativedelta import relativedelta
 def initialize(context):
-	g.securities = get_all_securities(["stock"]).index	
+	# g.securities = get_all_securities(["stock"]).index	
+	g.securities = get_index_stocks('000906.XSHG')	
 
 	# 先选取市现率最低500只，再从中选取半年内均值偏差最小的100只
 	# ，接着再选出三个月内均值偏差最小的50只，
@@ -29,7 +30,7 @@ def sell_stock(context):
 	for security in context.portfolio.positions:
 		order_target(security, 0)
 def buy_stock(context):	
-	queryObj = query(valuation.code,valuation.pcf_ratio,).filter(valuation.pcf_ratio > 0).order_by(
+	queryObj = query(valuation.code,valuation.pcf_ratio,).filter(valuation.pcf_ratio > 0,valuation.code.in_(g.securities)).order_by(
 		# 按市值降序排列
 		valuation.pcf_ratio.desc()
 	).limit(500)
