@@ -22,13 +22,27 @@ def initialize(context):
 	g.maxStocks = 5
 
 	run_monthly(buy_stock, 1,  time='14:45')
-	run_monthly(sell_stock, 1,  time='open')
+	# run_monthly(sell_stock, 1,  time='open')
 def handle_data(context, data):
+	sell_stock(context,data)
 	pass
 
-def sell_stock(context):
+def sell_stock(context,data):
 	for security in context.portfolio.positions:
-		order_target(security, 0)
+# 		print data[security]
+		if( not data[security].isnan() and not data[security].paused):
+			sData = data[security]
+			start_date = context.current_dt.date() - relativedelta(months = 3)
+			start_date = start_date.replace(day = 1)
+			end_date = context.current_dt - timedelta(context.current_dt.date().day)
+
+			secondVDf = get_price(security,start_date = start_date , end_date = end_date,fields = "volume" )
+			secondMDf = get_price(security,start_date = start_date, end_date = end_date,fields = "money" )		
+			avg = secondMDf['money'].sum()/secondVDf['volume'].sum()
+			close = sData.close
+			print "code:%s,close:%s,avg:%s:"%(security, close,avg)
+			if(close - avg >0):
+				order_target(security, 0)
 def buy_stock(context):	
 	queryObj = query(valuation.code,valuation.pcf_ratio,).filter(valuation.pcf_ratio > 0,valuation.code.in_(g.securities)).order_by(
 		# 按市值降序排列
