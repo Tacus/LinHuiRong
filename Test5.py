@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # import sys
 import os
 
@@ -12,6 +11,7 @@ import os
 
 cmd = "protoc --lua_out=" + "" + " --proto_path=" + ""+" "+""
 os.system(cmd)
+
 
 # print os.environ
 
