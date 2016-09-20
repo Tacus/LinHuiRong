@@ -38,7 +38,6 @@ def handle_data(context, data):
 	buyStocksMethod(context,data)
 	sellStocksMethod(context,data)
 
-
 def buyStocksMethod(context,data):
 	for security in g.security:
 		dict = data[security]
