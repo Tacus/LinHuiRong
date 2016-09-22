@@ -49,4 +49,4 @@ def sellStocksMethod(context,data):
 		if(not dict.isnan() and not dict.paused):
 			g.sellStrategy.sell(context,security)
 		else:
-			continue
+			continue 
