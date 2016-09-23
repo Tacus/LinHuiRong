@@ -14,8 +14,7 @@ class SellStrategy_holdMonth:
 	def sell(self,context,security):		
 		buyCtDict = self.buyCtDict[security]
 		buyDate = buyCtDict["buyDate"]
-		if buyDate == context.current_dt.date():
-			
+		if buyDate == context.current_dt.date():			
 			return
 		delta = context.current_dt.date() - buyDate
 		if(delta.days>=self.holdDays):
