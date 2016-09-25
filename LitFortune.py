@@ -2,6 +2,8 @@ from sqlalchemy import desc
 import numpy as np
 import pandas as pd
 from dateutil import relativedelta
+
+# 小市值，弹性高
 def initialize(context):
     run_monthly(month_select, 1, time='before_open')
     context.last_update_dt = None
