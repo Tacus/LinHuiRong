@@ -39,11 +39,7 @@ class BuyStrategy_Delay:
             days = self.toBuyDict[security]         
             if(days>=5):
                 perCash = 1.0/(self.maxBuyStocks - curTotalSts)
-                count = context.portfolio.cash*perCash/ curPrice
-                buyOrder = order(security, count)
-                if(not pd.isnull(buyOrder)):
-                    del self.toBuyDict[security]
-                    return True
+                order_value(security, context.portfolio.cash*perCash)
             else:
                 self.toBuyDict[security] = days +1
             return
@@ -66,3 +62,6 @@ class BuyStrategy_Delay:
     def getMarket_Cap(self,security):
         queryObj = query(valuation.code,valuation.market_cap).filter(valuation.market_cap<=100,valuation.code==security)
         return get_fundamentals(queryObj)
+
+    def removeToBuyDict(self,security):
+        del self.toBuyDict[security]

@@ -12,6 +12,8 @@ class SellStrategy_holdMonth:
 		self.holdDays = holdDays
 
 	def sell(self,context,security):
+		if(not self.buyCtDict.has_key(security)):
+			return
 		buyCtDict = self.buyCtDict[security]
 		buyDate = buyCtDict["buyDate"]
 		if buyDate == context.current_dt.date():
@@ -19,5 +21,3 @@ class SellStrategy_holdMonth:
 		delta = context.current_dt.date() - buyDate
 		if(delta.days>=self.holdDays):
 			order = order_target(security, 0)
-			if(pd.notnull(order)):
-				del self.buyCtDict[security]

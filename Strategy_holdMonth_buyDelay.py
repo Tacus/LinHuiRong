@@ -37,11 +37,7 @@ def buyStocksMethod(context,data):
         curPrice = dict.close
         factor = dict.factor
         if(not dict.isnan() and not dict.paused):
-            isBuy = g.buyStrategy.commonBuyStrategy(context,security,factor)
-            if isBuy:
-                buyCtDict = {}
-                buyCtDict["buyDate"] = context.current_dt.date()
-                g.buyCtDict[security] = buyCtDict 
+            g.buyStrategy.commonBuyStrategy(context,security,factor)
     
 def sellStocksMethod(context,data):
     for security in context.portfolio.positions:
@@ -50,3 +46,17 @@ def sellStocksMethod(context,data):
             g.sellStrategy.sell(context,security)
         else:
             continue 
+
+def after_trading_end(context):
+    #得到当天所有订单
+    orders = get_orders()
+    for _order in orders.values():
+        # log.info(_order.order_id)
+        if _order.status == OrderStatus.held and _order.is_buy == False:
+            del g.buyCtDict[_order.security]
+        elif _order.status == OrderStatus.held and _order.is_buy:
+            security = _order.security
+            g.buyStrategy.removeToBuyDict(security)
+            buyCtDict = {}
+            buyCtDict["buyDate"] = context.current_dt.date()
+            g.buyCtDict[security] = buyCtDict
