@@ -35,8 +35,6 @@ class BuyStrategy:
 			if(not buyFit):
 				return		
 		end_date = context.current_dt.date() - timedelta(1)
-		curPrice = get_price(security,end_date = end_date,frequency ='1d', fields = 'close',count = 1,skip_paused=True)
-		curPrice = curPrice.close[0]
 		tenVolume = get_price(security,end_date = end_date,frequency ='1d', fields = ['volume'],count = 10,skip_paused=True)
 		volumeRatioTen = tenVolume['volume'].sum()/10
 		fiveVolume = get_price(security,end_date = end_date,frequency ='1d', fields = ['volume'],count = 5,skip_paused=True)
@@ -56,9 +54,7 @@ class BuyStrategy:
 				# curAvg = curAvg.avg.sum()/20
 				# if(curAvg - lastAvg)>0:				
 				perCash = 1.0/(self.maxBuyStocks - curTotalSts)
-				count = context.portfolio.cash*perCash/ curPrice
-				order(security, count)
-				return True
+				order_value(security, context.portfolio.cash*perCash)
 
 	def getMarket_Cap(self,security):
 		queryObj = query(valuation.code,valuation.market_cap).filter(valuation.market_cap<=100,valuation.code==security)

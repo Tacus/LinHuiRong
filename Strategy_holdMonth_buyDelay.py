@@ -6,7 +6,7 @@ import datetime
 from  MyMacd import *
 from AdjustTimes import *
 from SellStrategy_holdMonth import *
-from BuyStrategy import *
+from BuyStrategy_Delay import *
 from MyUtil import *
 from jqdata import *
 def initialize(context):
@@ -19,9 +19,9 @@ def initialize(context):
     # g.security = get_security_info('000300.XSHG')
 
     g.macd = MyMacd(False)
-    g.adjustTims  = AdjustTimes(False)
+    g.adjustTimes  = AdjustTimes(False)
     g.util = MyUtil()
-    g.buyStrategy = BuyStrategy(g.macd,g.adjustTims)
+    g.buyStrategy = BuyStrategy_Delay(g.macd,g.adjustTimes)
     g.buyCtDict = {}    
     
     g.sellStrategy = SellStrategy_holdMonth(g.buyCtDict,30)
@@ -47,16 +47,16 @@ def sellStocksMethod(context,data):
         else:
             continue 
 
-#每个交易日结束运行
 def after_trading_end(context):
     #得到当天所有订单
     orders = get_orders()
     for _order in orders.values():
         # log.info(_order.order_id)
-        if _order.status == OrderStatus.held and not _order.is_buy:
+        if _order.status == OrderStatus.held and _order.is_buy == False:
             del g.buyCtDict[_order.security]
-        elif  _order.status == OrderStatus.held and _order.is_buy:
+        elif _order.status == OrderStatus.held and _order.is_buy:
             security = _order.security
+            g.buyStrategy.removeToBuyDict(security)
             buyCtDict = {}
             buyCtDict["buyDate"] = context.current_dt.date()
             g.buyCtDict[security] = buyCtDict
