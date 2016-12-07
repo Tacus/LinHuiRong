@@ -60,7 +60,7 @@ class BuyStrategy_Delay:
                 self.toBuyDict[security] = 1
 
     def getMarket_Cap(self,security):
-        queryObj = query(valuation.code,valuation.market_cap).filter(valuation.market_cap<=100,valuation.code==security)
+        queryObj = query(valuation.code,valuation.market_cap).filter(valuation.code==security)
         return get_fundamentals(queryObj)
 
     def removeToBuyDict(self,security):
