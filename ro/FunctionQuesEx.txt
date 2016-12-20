@@ -1,1 +1,47 @@
-FunctionQuesEx.txt
+FunctionQuesEx = class("FunctionQuesEx")
+
+function FunctionQuesEx.Me(  )
+	-- body
+	if nil == FunctionQuesEx.me then
+		FunctionQuesEx.me = FunctionQuesEx.new()
+	end
+	return FunctionQuesEx.me
+end
+
+function FunctionQuesEx:ctor()
+	self.quests = {}
+	self.teleportMap = {}
+	-- self.uiCm = NGUIUtil:GetCameraByLayername("UI");
+	self.gmCm = NGUIUtil:GetCameraByLayername("Default");
+
+	TimeTickManager.Me():CreateTick(0,1000,self.Update,self)
+	local eventManager = EventManager.Me()
+	eventManager:AddEventListener(ServiceEvent.SceneGoToUserCmd, self.SceneGoToUserCmd, self)
+	eventManager:AddEventListener(MyselfEvent.PlaceTo, self.SceneGoToUserCmd, self)
+end
+
+function FunctionQuesEx:AddQuestCheck(argData)
+	local id = argData.questData.id
+	local data = self.quests[id]
+	if(data)then
+		ReusableTable.DestroyTable(data)
+		self.quests[id] = nil
+	end
+
+	local map = self.teleportMap[id]
+	if(map)then
+		self.teleportMap[id] = nil
+		local inner = map["inner"]
+		if(inner)then
+			WorldTeleport.DestroyInnerTeleportInfo(inner)
+		end
+		ReusableTable.DestroyTable(map)
+	end
+
+	data = ReusableTable.CreateTable()
+	data.questData = argData.questData
+	data.owner = argData.owner
+	data.callback = argData.callback
+	self.quests[id] = data
+	self:initTeleportInfo(data)
+end
