@@ -1,5 +1,6 @@
 FunctionQuesEx = class("FunctionQuesEx")
 
+
 function FunctionQuesEx.Me(  )
 	-- body
 	if nil == FunctionQuesEx.me then
@@ -14,6 +15,42 @@ function FunctionQuesEx:ctor()
 	TimeTickManager.Me():CreateTick(0,3000,self.Update,self)
 	local eventManager = EventManager.Me()
 	eventManager:AddEventListener(MyselfEvent.MissionCommandChanged,self.handleMissionCommand,self)
+	self:init()
+end
+
+function FunctionQuesEx:init(  )
+	-- body
+	self:init_visitNpc()
+	self:init_scenery()
+end
+
+function FunctionQuesEx:init_visitNpc(  )
+	-- body
+	for k,v in pairs(Table_Npc) do
+		ServiceQuestProxy.Instance:CallVisitNpcUserCmd(k)
+	end
+end
+
+function FunctionQuesEx:init_scenery(  )
+	-- body
+	for k,v in pairs(Table_Viewspot) do
+		ServiceNUserProxy.Instance:CallSceneryUserCmd(nil, {k})
+	end
+end
+
+function FunctionQuesEx:init_takePhoto(  )
+	-- body
+	for k,v in pairs(Table_Monster) do
+		local data = ReusableTable.CreateArray()
+		for i=1,#nearMonster do
+			table.insert(data,k)
+			-- printRed("guid----:"..nearMonster[i].id)
+		end	
+		if(#data > 0)then
+			ServiceNUserProxy.Instance:CallCameraFocus(data)
+			ReusableTable.DestroyArray(data)
+		end
+	end
 end
 
 function FunctionQuesEx:handleMissionCommand( note )
@@ -274,5 +311,4 @@ function FunctionQuesEx:executeQuest( questData )
 
 		TableUtility.TableClear(cmdArgs)
 	end	
-end
 end
