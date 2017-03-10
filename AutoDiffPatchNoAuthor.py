@@ -42,7 +42,6 @@ for opt,value in opts:
 		exit()
 
 os.chdir(fromDir)
-
 # cmd = "svn update"
 # result = os.system(cmd)
 # print result
@@ -63,7 +62,7 @@ if startVersion == -1:
 if endVersion == -1:
 	endVersion = 'HEAD'
 
-cmd='svn log -r'+str(startVersion)+":"+newestVersion+" -q | grep [^-]| awk '{print $1}'"
+cmd='svn log -r'+str(startVersion)+":"+newestVersion+" -q | grep '[^-]'| awk '{print $1}'"
 stdout = commands.getoutput(cmd)
 if(stdout == ""):
 	printW("can't find changes from revision {0} to {1}".format(startVersion,endVersion))
@@ -77,17 +76,19 @@ index = 1
 patchFiles = []
 printR( "start diff...")
 
-patchDir = "~/Desktop/patchFils"
+patchDir = os.path.join(os.environ['HOME'],"Desktop/patchFils/")
 if(not os.path.exists(patchDir)):
+	print "create dir"
 	os.makedirs(patchDir)
 for rev in revs:
 	cmd = "echo "+rev+" |cut -c 2- "
 	rev = commands.getoutput(cmd)
-	patchFileName = "patch_{0}.patch".format(str(rev))
+	patchFileName = "{0}.patch".format(str(rev))
 	patchFileName = os.path.join(patchDir, patchFileName)
 	patchFiles.append(patchFileName)
-	cmd = "svn diff -r"+str(int(rev) -1)+":"+rev +">"+patchFile 
+	cmd = "svn diff -r"+str(int(rev) -1)+":"+rev +">"+patchFileName 
 	result = commands.getoutput(cmd)
+	print result
 	index = index +1
 
 printR( "start patch...")
