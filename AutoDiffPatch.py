@@ -87,7 +87,7 @@ for rev in revs:
 	patchFileName = "{0}.patch".format(str(rev))
 	patchFileName = os.path.join(patchDir, patchFileName)
 	patchFiles.append(patchFileName)
-	cmd = "svn diff -r"+str(int(rev) -1)+":"+rev +">"+patchFile 
+	cmd = "svn diff -r"+str(int(rev) -1)+":"+rev +">"+patchFileName 
 	result = commands.getoutput(cmd)
 	index = index +1
 

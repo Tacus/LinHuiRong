@@ -78,7 +78,6 @@ printR( "start diff...")
 
 patchDir = os.path.join(os.environ['HOME'],"Desktop/patchFils/")
 if(not os.path.exists(patchDir)):
-	print "create dir"
 	os.makedirs(patchDir)
 for rev in revs:
 	cmd = "echo "+rev+" |cut -c 2- "
