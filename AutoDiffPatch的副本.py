@@ -17,7 +17,7 @@ def printInfo(str):
 	print str
 
 def usage():
-	print " -s:合并的开始版本号（默认本地最新版本-100）\n -e:结束的版本号（默认本地最新）\n -f:合并的源分支（默认当前dash工作路径）\n -t:合并的目标分支（必填）"
+	print " -s:合并的开始版本号（默认本地最新版本-1000）\n -e:结束的版本号（默认本地最新）\n -f:合并的源分支（默认当前dash工作路径）\n -t:合并的目标分支（必填）"
 	# pass
 opts,argvs = getopt.getopt(sys.argv[1:],"s:e:f:t:h")
 startVersion = -1
@@ -58,7 +58,7 @@ newestVersion = commands.getoutput(cmd)
 
 if startVersion == -1:
 	startVersion = int(newestVersion) - 1000
-	printW("no start version;will use " + str(startVersion)+" (HEAD -100)")
+	printW("no start version;will use " + str(startVersion)+" (HEAD -1000)")
 
 if endVersion == -1:
 	endVersion = 'HEAD'
@@ -85,14 +85,25 @@ for rev in revs:
 	result = commands.getoutput(cmd)
 	index = index +1
 
+printR( "start patch...")
 os.chdir(targetDir)
 cmd = "pwd"
 result = commands.getoutput(cmd)
+
+conflictsPatchs = []
 for patchFile in patchFiles:
 
 	cmd = "svn patch " + patchFile
 	printR(cmd)
 	result = commands.getoutput(cmd)
 	printInfo( result)
-	cmd = "rm -f " + patchFile
-	commands.getoutput(cmd)
+	if(result.find("conflicts") != -1):
+		conflictsPatchs.append(patchFile)
+	else:
+		cmd = "rm -f " + patchFile
+		commands.getoutput(cmd)
+strs = "统计：未完全成功的patch文件"
+if(len(conflictsPatchs)>0):	
+	for conflict in conflictsPatchs:
+		strs = strs + conflict+"、"
+	printR(strs)
