@@ -76,11 +76,17 @@ revs = stdout.split("\n")
 index = 1
 patchFiles = []
 printR( "start diff...")
+
+patchDir = "~/Desktop/patchFils"
+if(not os.path.exists(patchDir)):
+	os.makedirs(patchDir)
+
 for rev in revs:
 	cmd = "echo "+rev+" |cut -c 2- "
 	rev = commands.getoutput(cmd)
-	patchFile = "~/Desktop/patch_{0}.patch".format(str(rev))
-	patchFiles.append(patchFile)
+	patchFileName = "patch_{0}.patch".format(str(rev))
+	patchFileName = os.path.join(patchDir, patchFileName)
+	patchFiles.append(patchFileName)
 	cmd = "svn diff -r"+str(int(rev) -1)+":"+rev +">"+patchFile 
 	result = commands.getoutput(cmd)
 	index = index +1
