@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 import os,sys,getopt,subprocess,commands,logging
+import shutil
 
 def printW(str):
 	print '\033[1;31;1m'
@@ -57,7 +58,7 @@ newestVersion = commands.getoutput(cmd)
 
 
 if startVersion == -1:
-	startVersion = int(newestVersion) - 1000
+	startVersion = int(newestVersion) - 100
 	printW("no start version;will use " + str(startVersion)+" (HEAD -1000)")
 
 if endVersion == -1:
@@ -77,7 +78,13 @@ index = 1
 patchFiles = []
 printR( "start diff...")
 
+
 patchDir = os.path.join(os.environ['HOME'],"Desktop/patchFils/")
+
+
+if(os.path.exists(patchDir)):
+	shutil.rmtree(patchDir)
+
 if(not os.path.exists(patchDir)):
 	os.makedirs(patchDir)
 
