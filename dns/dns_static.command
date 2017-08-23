@@ -1,0 +1,1 @@
+sudo networksetup -setdnsservers Ethernet 114.114.114.114
