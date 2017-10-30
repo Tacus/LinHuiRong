@@ -1,0 +1,31 @@
+要求：
+一、任选N只股票
+    stocks=[stock0,stock1,...]
+
+二、持仓股票信息
+    stocks_keeped=[(stock,keep_day,buy_price,keeped_value,N-up)]
+                  [(股票,持有天数,买入价格,当前市值,最近N日涨幅)]
+
+实现以下几个接口函数：
+一、can_enter_tobuy(context,security):
+    return True/False
+
+    判断股票是否符合海龟法则进场条件
+
+二、get_last_same_price_days(context,security):
+    return (last_same_price_days,max_reback_ratio)
+    返回股票距离上一次出现同样价格(与当日高点相比)的天数,并返回期间最大回撤幅度
+
+三、can_out_tosell(context,security):
+    return True/False
+    判断股票是否符合海龟法则离场条件
+
+四、can_add_lots(context,security):
+    return True/False
+    判断股票是否符合海龟法则加仓条件
+
+
+五、delete_stock(security):
+    return True/False
+    如果股票处于持股状态，不可删除
+    从备选股票中删除指定股票
