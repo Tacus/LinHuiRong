@@ -33,7 +33,7 @@ class BuyStrategy:
 		if not adjustTimes== None:
 			buyFit = adjustTimes == self.buyAdjustTime
 			if(not buyFit):
-				return		
+				return
 		end_date = context.current_dt.date() - timedelta(1)
 		tenVolume = get_price(security,end_date = end_date,frequency ='1d', fields = ['volume'],count = 10,skip_paused=True)
 		volumeRatioTen = tenVolume['volume'].sum()/10

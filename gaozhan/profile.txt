@@ -1,0 +1,75 @@
+Timer unit: 1e-06 s
+
+Total time: 13855.1 s
+File: /tmp/codejail/58/6268658/tmpzadq2i/user_code.py
+Function: before_market_open at line 33
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    33                                           def before_market_open(context):
+    34       189       271641   1437.3      0.0      log.info('函数运行时间(market_open):'+str(context.current_dt.time()))
+    35       189         3972     21.0      0.0      g.security = []
+    36       189        63714    337.1      0.0      current_data = get_current_data()
+    37       189     14570892  77094.7      0.1      df5 = history(security_list = g.initsecurity,unit = '1d', field = 'close',count =  6,df = False, skip_paused = False)
+    38       189     15817559  83690.8      0.1      df10 = history(security_list = g.initsecurity,unit = '1d', field = 'close',count =  11,df = False, skip_paused = False)
+    39       189     15533133  82185.9      0.1      df20 = history(security_list = g.initsecurity,unit = '1d', field = 'close',count =  21,df = False, skip_paused = False)
+    40       189     17827126  94323.4      0.1      df40 = history(security_list = g.initsecurity,unit = '1d', field = 'close',count =  41,df = False, skip_paused = False)
+    41       189     20434975 108121.6      0.1      df60 = history(security_list = g.initsecurity,unit = '1d', field = 'close',count =  61,df = False, skip_paused = False)
+    42     56889       170021      3.0      0.0      for security in g.initsecurity:
+    43     56700      2911083     51.3      0.0          security_data = current_data[security]
+    44     56700      3507562     61.9      0.0          if(not security_data.paused and not security_data.is_st):
+    45     53103       408925      7.7      0.0              close_data = df5[security]
+    46                                                       # 取得过去五天的平均价格
+    47     53103       151801      2.9      0.0              single_dict = dict()
+    48     53103       610935     11.5      0.0              g.varivble_dict[security] = single_dict
+    49     53103      2388593     45.0      0.0              MA5_1 = close_data[1:].mean()
+    50     53103      1165041     21.9      0.0              MA5_2 = close_data[:5].mean()
+    51     53103       126598      2.4      0.0              single_dict["df5"] = close_data
+    52     53103       109338      2.1      0.0              single_dict["MA5_1"] = MA5_1
+    53     53103       107313      2.0      0.0              single_dict["MA5_2"] = MA5_1
+    54                                                       
+    55     53103       393387      7.4      0.0              close_data = df10[security]
+    56     53103      1113349     21.0      0.0              MA10_1 = close_data[1:].mean()
+    57     53103       968020     18.2      0.0              MA10_2 = close_data[:10].mean()
+    58     53103       122659      2.3      0.0              single_dict["df10"] = close_data
+    59     53103       108979      2.1      0.0              single_dict["MA10_1"] = MA10_1
+    60     53103       160741      3.0      0.0              single_dict["MA10_2"] = MA10_2
+    61                                                       
+    62     53103       331814      6.2      0.0              close_data = df20[security]
+    63     53103      1053249     19.8      0.0              MA20_1 = close_data[1:].mean()
+    64     53103       948953     17.9      0.0              MA20_2 = close_data[:20].mean()
+    65     53103       121189      2.3      0.0              single_dict["df20"] = close_data
+    66     53103       109972      2.1      0.0              single_dict["MA20_1"] = MA20_1
+    67     53103       109944      2.1      0.0              single_dict["MA20_2"] = MA20_2
+    68                                                       
+    69                                                    
+    70     53103       312795      5.9      0.0              close_data = df40[security]
+    71     53103      1025452     19.3      0.0              MA40_1 = close_data[:40].mean()
+    72     53103       120251      2.3      0.0              single_dict["df40"] = close_data
+    73     53103       109825      2.1      0.0              single_dict["MA40_1"] = MA40_1
+    74     53103       312403      5.9      0.0              close_date = df60[security]
+    75     53103      1005639     18.9      0.0              MA60 = close_data[1:].mean()
+    76     53103       942431     17.7      0.0              MA60_1 = close_data[:60].mean()
+    77     53103       121011      2.3      0.0              single_dict["df60"] = close_data
+    78     53103       109814      2.1      0.0              single_dict["MA60_1"] = MA60_1
+    79     53103       194588      3.7      0.0              g.security.append(security)
+    80                                                       
+    81     53103   6841777893 128839.8     49.4              ma_abs_five = get_ma_absdellta(context,security,5,10,49)
+    82     53103   6906995587 130067.9     49.9              ma_abs_ten = get_ma_absdellta(context,security,10,20,49)
+    83     53103       228517      4.3      0.0              single_dict["ma_abs_five"] = ma_abs_five
+    84     53103       121850      2.3      0.0              single_dict["ma_abs_ten"] = ma_abs_ten
+
+Total time: 8598.9 s
+File: /tmp/codejail/58/6268658/tmpzadq2i/user_code.py
+Function: handle_data at line 86
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    86                                           def handle_data(context, data):
+    87     45360      1482260     32.7      0.0      current_data = get_current_data()
+    88    340513     19562158     57.4      0.2      for security,position in context.portfolio.positions.iteritems():
+    89                                                   # print(type(position),position)
+    90    295153   1490806742   5051.0     17.3          check_sell(position,current_data,context)
+    91                                                   
+    92                                               # for security in g.security:
+    93     45360   7087050376 156240.1     82.4      check_buy(context)
