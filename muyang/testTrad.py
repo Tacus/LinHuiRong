@@ -2,9 +2,7 @@ enable_profile()
 from jqdata import jy
 import numpy as np
 <<<<<<< HEAD
-=======
-import pandas as pd
->>>>>>> 22cedcf3bb78375694dab6ce01f84e8b0436245c
+
 import math
 
 from sqlalchemy import or_
