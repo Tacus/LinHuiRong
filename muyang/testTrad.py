@@ -45,7 +45,6 @@ def initialize(context):
     g.sw1_weight = 1
     g.sw2_weight = 3
     g.stock_weight = 6
->>>>>>> 22cedcf3bb78375694dab6ce01f84e8b0436245c
 # 获取行业指数
 def get_SW_index(SW_index,start_date = '2017-01-31',end_date = '2018-01-31'):
     jydf = jy.run_query(query(jy.SecuMain).filter(jy.SecuMain.SecuCode == (SW_index)))
