@@ -1,50 +1,61 @@
 enable_profile()
 from jqdata import jy
+import jqdata
 import numpy as np
-<<<<<<< HEAD
-
+import pandas as pd
 import math
 
 from sqlalchemy import or_
 from jy_sw_industry_code import *
-industry_level = 1 # 行业级别（1，2，3）
-industry_st = 9 #行业标准
-
 
 jydf = jy.run_query(query(jy.SecuMain))
-<<<<<<< HEAD
-
-
-index_list = ['OpenPrice','ClosePrice']
-
-=======
 # (jydf)
 
 index_list = ['OpenPrice','ClosePrice']
 
-
-
 #行业映射成分股    
+#sw 申万指数代码
 def init_stock_security_map(sw):
     df = pd.DataFrame()
+    allstocks_df = get_all_securities()
+    allstocks_df["display_code"] = allstocks_df.index.tolist()
     for code in sw:
-        _df = pd.DataFrame(get_industry_stocks(code),columns =['code'])
+        stocks_list = get_industry_stocks(code)
+        # stocks_list[]
+        _df = pd.DataFrame(stocks_list,columns =['code'])
         _df['industrycode'] = code
-        # _df['industryname'] = self.info[code]['name']
-        # if date_col:
-        #     _df['date'] = date               
+        stock_info = allstocks_df[allstocks_df["display_code"].isin ( stocks_list)]
+       
+        _df["display_name"] = stock_info["display_name"].tolist()
+        # print(_df)
         df = pd.concat([df,_df],axis =0)
+        
+    df.index = df["display_name"]
+    # print(df
     return df
     
 sw1mapdf = init_stock_security_map(SW1)
 sw2mapdf = init_stock_security_map(SW2)
-# (sw2mapdf)
-# (sw1mapdf)
+
 def initialize(context):
     # g为全局变量
     g.sw1_weight = 1
     g.sw2_weight = 3
     g.stock_weight = 6
+    
+    #个股均线周期
+    g.avg_period_1 = 50 
+    g.avg_period_2 = 150
+    g.avg_period_3 = 200
+    #个股涨幅周期
+    g.min_increase_period = 250
+    g.max_increase_period = 250
+    #个股上市最小自然日
+    g.stock_listDays = 300 #420
+    #指数涨幅计算自然日区间
+    g.industry_rangeDays = 120
+    #个股涨幅计算自然日区间
+    g.stock_rangeDays = 250 #250
 # 获取行业指数
 def get_SW_index(SW_index,start_date = '2017-01-31',end_date = '2018-01-31'):
     jydf = jy.run_query(query(jy.SecuMain).filter(jy.SecuMain.SecuCode == (SW_index)))
@@ -57,141 +68,106 @@ def get_SW_index(SW_index,start_date = '2017-01-31',end_date = '2018-01-31'):
     df.index = df['TradingDay']
     return df[index_list]
 
-
-
-ratioList = list()
-
 def secuindex_sort(el1,el2):
-<<<<<<< HEAD
-    if(el1["ratio"] >  el2["ratio"]):
-        return 1
-    elif el1["ratio"] ==  el2["ratio"]:
-=======
     if(el1["value"] >  el2["value"]):
         return 1
     elif el1["value"] ==  el2["value"]:
->>>>>>> 22cedcf3bb78375694dab6ce01f84e8b0436245c
         return 0
     else:
         return -1
 
-<<<<<<< HEAD
-    
 def handle_data(context, data):
     cur_date = context.current_dt
-    star_date = cur_date + datetime.timedelta(days=-120)
-    sortedList_level1 = get_ratioandsort(SW1,star_date,cur_date)
-    sortedList_level2 = get_ratioandsort(SW2,star_date,cur_date)
-    print(sortedList_level1)
-
-def get_ratioandsort(secus,start_date,end_date):
-    securitys = list()
-    # print(dir(npar))
-    for x in secus:
-        df = get_SW_index(x,start_date,end_date)
-        ratio = get_ratio(x,df)
-        securitys.append({"secu":x,"ratio":ratio})
-    result = sorted(securitys,cmp = secuindex_sort)
-    minRatio = result[0]["ratio"]
-    maxRatio = result[-1]["ratio"]
-    max_delta = maxRatio - minRatio
-    for x in result:
-        ratio = x["ratio"]
-        detal = ratio - minRatio
-        weight = detal/max_delta*100
-        x["ratevalue"] = math.floor(weight)
-        name = jydf[jydf["SecuCode"]==x["secu"]]["ChiName"][0]
-        x["name"] = name
-        print(name)
-    return result
-
-def get_ratio(secuCode,df):
-    openPrice = df["ClosePrice"][0]
-    closePrice = df["ClosePrice"][-1]
-    return (closePrice - openPrice)/openPrice
-   
-
-# df = get_SW_index(SW1)
-# print(df)
-# df = get_SW_index(SW2)
-# print(df)
-=======
-    
-def handle_data(context, data):
-    cur_date = context.current_dt
-    start_date = cur_date + datetime.timedelta(days=-120)
+    g.all_trade_days = jqdata.get_trade_days(count = 300)
+    # start_date = cur_date + datetime.timedelta(days=-g.industry_rangeDays)
+    start_date = g.all_trade_days[-g.industry_rangeDays]
+    # print(g.all_trade_days)
     sortedList_level1 = get_ratioandsort(SW1,start_date,cur_date)
     sortedList_level2 = get_ratioandsort(SW2,start_date,cur_date)
-    availiable = get_availible_stock(context,sortedList_level1,sortedList_level2)
+    availiable = get_availible_stock(context,data,sortedList_level1,sortedList_level2)
     # (availiable)
     # (sortedList_level1)
 
+def common_get_weight(list):
+    size = len(list)
+    for index in range(len(list)):
+        x = list[index]    
+        # value =  (index+1)*(99/(1-size))+100-(99/(1-size))
+        value = index*(99.0/(1-size))+100
+        x["weight"] = value
+        # print("common_get_weight:",x["secu"],index,size,value)
+
 def get_ratioandsort(secus,start_date,end_date):
     securitys = list()
-    # print(dir(npar))
     for x in secus:
         df = get_SW_index(x,start_date,end_date)
-        ratio = get_ratio(x,df)
+        ratio = get_ratio(df)
         if math.isnan(ratio):
             ratio = 0
         securitys.append({"secu":x,"value":ratio})
-    result = sorted(securitys,key  = lambda d: d["value"])
-    minRatio = result[0]["value"]
-    maxRatio = result[-1]["value"]
-    max_delta = maxRatio - minRatio
-    for x in result:
-        ratio = x["value"]
-        detal = ratio - minRatio
-        weight = detal/max_delta*100
-        x["weight"] = math.floor(weight)
-        # print(x["secu"])
-        # jydf = jy.run_query(query(jy.SecuMain).filter(jy.SecuMain.SecuCode == x["secu"]))
-        # name = jydf["ChiName"][0]
-        # # print(jydf)
-        # x["name"] = str(name)
+    result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
+    common_get_weight(result)
     return result
 
-def get_ratio(secuCode,df):
+def get_ratio(df):
     openPrice = df["ClosePrice"][0]
     closePrice = df["ClosePrice"][-1]
     return (closePrice - openPrice)/openPrice
-   
+    
+#计算N天均线值（skip_paused True：使用交易日，False:使用自然日 ）
+def get_day_ratio(securitylist,days):
+    df = history(days, "1d", "close", securitylist,skip_paused = True)
+    series_sum = df.apply(sum)
+    # print(df)
+    avg = series_sum/days
+    return avg
+#计算N天极值
+def get_day_extreme(securitylist,days,method):
+    df = history(days, "1d", "close", securitylist)
+    result = df.apply(method)
+    # avg = series_sum/days
+    return result
 
 # 获取上市大于300天的个股
-def get_availible_stock(context,sw1dict,sw2dict):
-    start_date = context.current_dt + datetime.timedelta(days = -300)
-    start_date = start_date.date()
+def get_availible_stock(context,data,sw1dict,sw2dict):
+    # start_date = context.current_dt + datetime.timedelta(days = -g.stock_listDays)
+    # start_date = start_date.date()
+    start_date = g.all_trade_days[-g.stock_listDays]
     secuData = get_all_securities(types=['stock'])
     secuData = secuData[secuData["start_date"]<=start_date]
     secuData = secuData.index.tolist()
-    # retDictopen =  history(1,"250d",'open',secuData,True)
-    # retDictclose =  history(1,"250d",'close',secuData,True)
+    
+    avg_1 = get_day_ratio(secuData,g.avg_period_1)
+    
+    avg_2 = get_day_ratio(secuData,g.avg_period_2)
+    
+    avg_3 = get_day_ratio(secuData,g.avg_period_3)
+    
+    min_closes = get_day_extreme(secuData,g.min_increase_period,min)
+    max_closes = get_day_extreme(secuData,g.max_increase_period,max)
     
     # resultDf = ((retDictclose - retDictopen)/retDictopen)
     # print( (retDictclose["close"]- retDictopen["open"])/retDictopen["open"])
     
-    result = get_price(secuData, None, context.current_dt, "250d", ["open","close"], False, "pre", 1)
+    result = get_price(secuData, None, context.current_dt, str(g.stock_rangeDays)+"d", ["open","close"], False, "pre", 1)
     # result.fillnan(0)
     securitys = list()
     resultRatio = (result["close"] - result["open"])/result["open"]
     # resultDelta = result["close"] - result["open"]
+    # print(resultRatio)
     for x in secuData:
         ratio = resultRatio[x][0]
         if math.isnan(ratio):
+            # print(x,"null")
             ratio = 0
         securitys.append({"value":ratio,"secu":x})
     
-    result = sorted(securitys,key  = lambda d: d["value"])
-    # print(result)
-    minRatio = result[0]["value"]
-    maxRatio = result[-1]["value"]
-    max_delta = maxRatio - minRatio
+    result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
+    common_get_weight(result)
+    # print("result",result)
     for x in result:
-        ratio = x["value"]
-        detal = ratio - minRatio
         plateWeight = get_plante_weight(x["secu"],sw1dict,sw2dict)
-        # plateWeight = 0
-        deltaValue = detal/max_delta*100
+        deltaValue = x["weight"]
         ret = math.isnan(deltaValue)
         weight = 0
         if(not ret):
@@ -199,14 +175,44 @@ def get_availible_stock(context,sw1dict,sw2dict):
         # print(x["secu"],ratio,maxRatio,minRatio,plateWeight,weight)
         x["value"] = math.floor(weight)
     result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
-    # print(result)
     num =int( math.floor(len(result)*0.2))
     # (result)
-    result = result[:num]
+    # result = result[:num]
+    # print("num:",num)
     index = 1
     for x in result:
-        log.info("%s的排名为：%s,分数为：%s"%(x["secu"],index,x["value"] ) )
-        index +=1
+        # security_name = sw1mapdf.loc[x["secu"]]
+        security = x["secu"]
+        security_name = sw1mapdf[sw1mapdf["code"] == security]
+        close = data[security].close
+        security_avg1 = avg_1[security]
+        security_avg2 = avg_2[security]
+        security_avg3 = avg_3[security]
+        min_close = min_closes[security]
+        max_close = max_closes[security]
+        # log.info("%s当前价：%s,avg1为：%s,avg2为：%s,avg3为：%s,\
+        #     min_close为：%s,max_close为：%s,"%(
+        #     security,close,security_avg1,security_avg2 ,
+        #     security_avg3,min_close,max_close) )
+        
+        
+        if(security_name is not None and close>security_avg1 
+            and security_avg1>security_avg2 
+            and security_avg2>security_avg3
+            and close>min_close*1.1
+            and close>max_close*0.7):
+            if(security_name["display_name"].size == 0):
+                #  log.info("name 为空",security,security_name,sw1mapdf)
+                 continue
+            security_name = security_name["display_name"][0]
+            log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s"%(x["secu"],security_name,index,x["value"],x["weight"] ) )
+            index += 1
+            if(index > num):
+                break
+        # else:
+        #     security_name = "已退市"
+        # log.info("%s（%s）的排名为：%s,分数为：%s"%(x["secu"],security_name,index,x["value"] ) )
+        # index +=1
     # for i in arrange
     # (result)
 
@@ -224,12 +230,10 @@ def get_plante_weight(security,sw1list,sw2list):
     #         weightValue += x["weight"]*g.sw2_weight/10
     #         break
         
-    # return weightValue
     weightValue += get_weight(security,sw1mapdf,sw1list,g.sw1_weight,1)
     weightValue += get_weight(security,sw2mapdf,sw2list,g.sw2_weight,2)
-    # log.info("%s的最终权重值为：%s"%(security,weightValue ) )
     return weightValue
-    
+#
 def get_weight(security,df,swlist,weightRatio,level):
     df = df[df['code'] == security]
     industrycode = list(df["industrycode"])
@@ -250,9 +254,3 @@ def get_sw_code(security,sw):
             if(y == security):
                 return x
 
-    # pass
-# df = get_SW_index(SW1)
-# (df)
-# df = get_SW_index(SW2)
-# (df)
->>>>>>> 22cedcf3bb78375694dab6ce01f84e8b0436245c
