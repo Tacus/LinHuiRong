@@ -303,15 +303,9 @@ def get_adjust_eps(df):
 #获取eps强势股    
 def get_mighty_eps_stocks(context,securitys=None):
     if(securitys):
-<<<<<<< HEAD
         qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit).filter(valuation.code.in_(securitys))
     else:
         qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit)
-=======
-        qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate).filter(valuation.code.in_(securitys))
-    else:
-        qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate)
->>>>>>> 10bc97887030c63b04f7f2b986e8f03fb09ab700
     df = get_fundamentals(qobj,date=context.current_dt)
     # print(df)
     result = []
@@ -321,11 +315,7 @@ def get_mighty_eps_stocks(context,securitys=None):
         dt_str = cldata.statDate
         dt = datetime.datetime.strptime(dt_str, '%Y-%m-%d')
         code = cldata.code
-<<<<<<< HEAD
         eps = cldata.eps*cldata.adjusted_profit_to_profit
-=======
-        eps = cldata.eps
->>>>>>> 10bc97887030c63b04f7f2b986e8f03fb09ab700
         market_cap = cldata.circulating_market_cap
         
         last_dt = get_last_reason_date(dt,0,1)
