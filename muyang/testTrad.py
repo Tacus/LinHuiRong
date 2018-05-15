@@ -104,7 +104,13 @@ def handle_data(context, data):
                 # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%"%(stock,
                 # price_stock["security_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
                 # eps_stock["eps_ratio"]))
-    result = sorted(result,key = lambda d: d["eps_ratio"],reverse = True)
+    gr_index2 = get_growth_rate("000016.XSHG")
+    gr_index8 = get_growth_rate("399333.XSHE")
+    if(gr_index8<gr_index2):
+        log.info("当前大盘强于小盘",gr_index2,gr_index8)
+    else:
+        log.info("当前小盘强于大盘",gr_index2,gr_index8)
+    result = sorted(result,key = lambda d: d.market_cap,reverse = gr_index2>gr_index8)
     for single in result:
         print(single)
     # (availiable)
@@ -117,7 +123,7 @@ def common_get_weight(list):
         x = list[index]    
         # value =  (index+1)*(99/(1-size))+100-(99/(1-size))
         value = index*(99.0/(1-size))+100
-        x["weight"] = value
+        x["weight"] = round(value,1)
         # print("common_get_weight:",x["secu"],index,size,value)
 
 def get_ratioandsort(secus,start_date,end_date):
@@ -196,7 +202,7 @@ def get_mighty_price_stocks(context,data,sw1dict,sw2dict):
         if(not ret):
              weight = deltaValue*g.stock_weight/10+plateWeight
         # print(x["secu"],ratio,maxRatio,minRatio,plateWeight,weight)
-        x["value"] = math.floor(weight)
+        x["value"] = round(weight,1)
     result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
     num =int( math.floor(len(result)*0.2))
     # (result)
@@ -287,9 +293,19 @@ def get_last_year_date(dt,year_count = 0):
     year = year - year_count
     return str(year)
 
+    # 获取扣非eps
+def get_adjust_eps(df):
+    eps = simple_df["eps"][0]
+    eps = eps*simple_df["adjusted_profit_to_profit"][0]
+    return eps
+
+
 #获取eps强势股    
-def get_mighty_eps_stocks(context):
-    qobj = query(valuation.code,income.basic_eps,indicator.eps,indicator.statDate)
+def get_mighty_eps_stocks(context,securitys=None):
+    if(securitys):
+        qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit).filter(valuation.code.in_(securitys))
+    else:
+        qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit)
     df = get_fundamentals(qobj,date=context.current_dt)
     # print(df)
     result = []
@@ -299,13 +315,14 @@ def get_mighty_eps_stocks(context):
         dt_str = cldata.statDate
         dt = datetime.datetime.strptime(dt_str, '%Y-%m-%d')
         code = cldata.code
-        eps = cldata.eps
+        eps = cldata.eps*cldata.adjusted_profit_to_profit
+        market_cap = cldata.circulating_market_cap
         
         last_dt = get_last_reason_date(dt,0,1)
         last_dt2 = get_last_reason_date(dt,1)
         last_dt3 = get_last_reason_date(dt,1,1)
         
-        single_query = query(valuation.code,income.basic_eps,indicator.eps,indicator.statDate).filter(valuation.code == code)
+        single_query = query(valuation.code,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit).filter(valuation.code == code)
         single_df = get_fundamentals(single_query,statDate=last_dt)
         single_df2 = get_fundamentals(single_query,statDate=last_dt2)
         single_df3 = get_fundamentals(single_query,statDate=last_dt3)
@@ -314,9 +331,9 @@ def get_mighty_eps_stocks(context):
             # print("未找到财报数据",code,dt,last_dt,last_dt2,last_dt3)
             continue
         dt_str2 = single_df2["statDate"][0]
-        last_eps = single_df["eps"][0]
-        last_eps2 = single_df2["eps"][0]
-        last_eps3 = single_df3["eps"][0]
+        last_eps = get_adjust_eps(single_df)
+        last_eps2 = get_adjust_eps(single_df2)
+        last_eps3 = get_adjust_eps(single_df3)
         ratio = (eps - last_eps)/last_eps
         ratio2 = (last_eps2 - last_eps3)/last_eps3
         # x["eps_ratio"] = math.floor(ratio*100)
@@ -327,7 +344,8 @@ def get_mighty_eps_stocks(context):
         "eps_ratio":round(ratio*100,1),
         "eps_ratio2":round(ratio2*100,1),
         "eps_date":dt_str,
-        "eps_date2":dt_str2
+        "eps_date2":dt_str2,
+        "market_cap":market_cap
         })
         # result.append({"code":code,"eps_ratio":round(ratio*100,1),"eps_ratio2":round(ratio2*100,1)})
         # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,eps增长率：%s%%"%(x["secu"],x["security_name"],x["index"],x["value"],math.floor(x["weight"]) ,math.floor(ratio*100)) )
@@ -417,26 +435,26 @@ def get_mighty_eps_stocks(context):
     return result
     # fileter_securitys = np.zeros(shape = (10))
     # np.append(fileter_securitys,10)
-    
+
 # #获取年度季度eps累计
 def get_total_eps_stocks(dt_str,code):
-    single_query = query(valuation.code,income.basic_eps,indicator.eps,indicator.statDate).filter(valuation.code == code)
+    single_query = query(valuation.code,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit).filter(valuation.code == code)
     reason = dt_str+"q1"
     eps = 0
     simple_df = get_fundamentals(single_query,statDate=reason)
     if(simple_df.empty):
         return None
-    eps = eps+simple_df["eps"][0]
+    eps = eps+get_adjust_eps(simple_df)
     reason = dt_str+"q2"
     simple_df = get_fundamentals(single_query,statDate=reason)
     if(simple_df.empty):
         return None
-    eps = eps+simple_df["eps"][0]
+    eps = eps+get_adjust_eps(simple_df)
     reason = dt_str+"q3"
     simple_df = get_fundamentals(single_query,statDate=reason)
     if(simple_df.empty):
         return None
-    eps = eps+simple_df["eps"][0]
+    eps = eps+get_adjust_eps(simple_df)
     return eps
     
     
@@ -468,7 +486,26 @@ class StockInfo:
         self.value = price_stock["value"]
         self.security_name = price_stock["security_name"]
         self.index = price_stock["index"]
-        self.weight = price_stock["weight"]        
+        self.weight = price_stock["weight"]
+        self.market_cap = eps_stock["market_cap"]
     def __str__(self):
-        log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%"%(code,
-        self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio))
+        log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
+        self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
+        return ""
+        
+# 获取股票n日以来涨幅，根据当前价计算
+# n 默认20日
+def get_growth_rate(security, n=20):
+    lc = get_close_price(security, n)
+    #c = data[security].close
+    c = get_close_price(security, 1, '1m')
+    
+    if not isnan(lc) and not isnan(c) and lc != 0:
+        return (c - lc) / lc
+    else:
+        log.error("数据非法, security: %s, %d日收盘价: %f, 当前价: %f" %(security, n, lc, c))
+        return 0
+
+# 获取前n个单位时间当时的收盘价
+def get_close_price(security, n, unit='1d'):
+    return attribute_history(security, n, unit, ('close'), True)['close'][0]
