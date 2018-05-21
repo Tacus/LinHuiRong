@@ -56,6 +56,10 @@ def initialize(context):
     g.industry_rangeDays = 120
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
+
+    # g.debug_stocks = ["000729.XSHE"]
+    g.debug_stocks = None
+
 # 获取行业指数
 def get_SW_index(SW_index,start_date = '2017-01-31',end_date = '2018-01-31'):
     jydf = jy.run_query(query(jy.SecuMain).filter(jy.SecuMain.SecuCode == (SW_index)))
@@ -83,7 +87,7 @@ def handle_data(context, data):
     sortedList_level1 = get_ratioandsort(SW1,start_date,cur_date)
     sortedList_level2 = get_ratioandsort(SW2,start_date,cur_date)
     mighty_price_list = get_mighty_price_stocks(context,data,sortedList_level1,sortedList_level2)
-    mighty_eps_list = get_mighty_eps_stocks(context)
+    mighty_eps_list = get_mighty_eps_stocks(context,g.debug_stocks)
     result = []
     for stock,price_stock in mighty_price_list.items():
         for eps_stock in mighty_eps_list :
@@ -113,9 +117,6 @@ def handle_data(context, data):
     result = sorted(result,key = lambda d: d.market_cap,reverse = gr_index2>gr_index8)
     for single in result:
         print(single)
-    # (availiable)
-    # (sortedList_level1)
-    # filter_eps(("002340.XSHE","002318.XSHE"),context)
 
 def common_get_weight(list):
     size = len(list)
@@ -295,8 +296,8 @@ def get_last_year_date(dt,year_count = 0):
 
     # 获取扣非eps
 def get_adjust_eps(df):
-    eps = simple_df["eps"][0]
-    eps = eps*simple_df["adjusted_profit_to_profit"][0]
+    eps = df["eps"][0]
+    eps = eps*df["adjusted_profit_to_profit"][0]/100
     return eps
 
 
@@ -306,16 +307,17 @@ def get_mighty_eps_stocks(context,securitys=None):
         qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit).filter(valuation.code.in_(securitys))
     else:
         qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit)
-    df = get_fundamentals(qobj,date=context.current_dt)
+    current_dt = context.current_dt
+    df = get_fundamentals(qobj,date=current_dt)
     # print(df)
     result = []
-    current_dt = context.current_dt
     for index in df.index:
         cldata = df.loc[index]
         dt_str = cldata.statDate
         dt = datetime.datetime.strptime(dt_str, '%Y-%m-%d')
         code = cldata.code
-        eps = cldata.eps*cldata.adjusted_profit_to_profit
+        eps = cldata.eps*cldata.adjusted_profit_to_profit/100
+        print(str.format("eps:%s,rps:%s,eps:%s"%(cldata.eps,cldata.adjusted_profit_to_profit,eps)))
         market_cap = cldata.circulating_market_cap
         
         last_dt = get_last_reason_date(dt,0,1)
@@ -334,6 +336,7 @@ def get_mighty_eps_stocks(context,securitys=None):
         last_eps = get_adjust_eps(single_df)
         last_eps2 = get_adjust_eps(single_df2)
         last_eps3 = get_adjust_eps(single_df3)
+        print(str.format("eps:%s,eps2:%s,eps3:%s"%(last_eps,last_eps2,last_eps3)))
         ratio = (eps - last_eps)/last_eps
         ratio2 = (last_eps2 - last_eps3)/last_eps3
         # x["eps_ratio"] = math.floor(ratio*100)
@@ -430,8 +433,8 @@ def get_mighty_eps_stocks(context,securitys=None):
     #       year_eps_ratio3 = x["year_eps_ratio3"]
     # #     log.info("%s的最近两个季度eps增长率：%s:%s%%,%s:%s%%，最近年度eps增长率：%s%%,%s%%,%s%%"%(x["code"],
     # #   x["eps_date2"],x["eps_ratio2"],x["eps_date"], x["eps_ratio"],year_eps_ratio3,year_eps_ratio2,x["year_eps_ratio"]))
-    #     log.info("%s的最近两个季度eps增长率：%s%%,%s%%，最近年度eps增长率：%s%%,%s%%,%s%%"%(x["code"],
-    #   x["eps_ratio2"], x["eps_ratio"],year_eps_ratio3,year_eps_ratio2,x["year_eps_ratio"]))
+    #     log.info("%s的最近两个季度eps增长率：%s%%,%s%%，最近年度eps增长率：%s%%,%s%%"%(x["code"],
+    #   x["eps_ratio2"], x["eps_ratio"],year_eps_ratio3,year_eps_ratio2))
     return result
     # fileter_securitys = np.zeros(shape = (10))
     # np.append(fileter_securitys,10)
