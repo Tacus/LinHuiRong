@@ -1,3 +1,5 @@
+#1、价格强势股的当前价格是否需要实时计算？√
+
 enable_profile()
 from jqdata import jy
 import jqdata
@@ -9,7 +11,6 @@ from sqlalchemy import or_
 from jy_sw_industry_code import *
 
 jydf = jy.run_query(query(jy.SecuMain))
-# (jydf)
 
 index_list = ['OpenPrice','ClosePrice']
 
@@ -80,7 +81,6 @@ def secuindex_sort(el1,el2):
     else:
         return -1
 
-#价格强势股的当前价格是否需要实时计算
 def before_trading_start(context):
     cur_date = context.current_dt
     g.all_trade_days = jqdata.get_trade_days(count = 300)
