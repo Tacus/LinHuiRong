@@ -80,7 +80,8 @@ def secuindex_sort(el1,el2):
     else:
         return -1
 
-def handle_data(context, data):
+#价格强势股的当前价格是否需要实时计算
+def before_trading_start(context):
     cur_date = context.current_dt
     g.all_trade_days = jqdata.get_trade_days(count = 300)
     start_date = g.all_trade_days[-g.industry_rangeDays]
@@ -114,9 +115,13 @@ def handle_data(context, data):
         log.info("当前大盘强于小盘",gr_index2,gr_index8)
     else:
         log.info("当前小盘强于大盘",gr_index2,gr_index8)
-    result = sorted(result,key = lambda d: d.market_cap,reverse = gr_index2>gr_index8)
-    for single in result:
+    g.valid_stocks = sorted(result,key = lambda d: d.market_cap,reverse = gr_index2>gr_index8)
+    for single in g.valid_stocks:
         print(single)
+    # return g.valid_stocks
+
+def handle_data(context, data):
+    
 
 def common_get_weight(list):
     size = len(list)
