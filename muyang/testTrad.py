@@ -631,14 +631,14 @@ class StockInfo:
         current_data = get_current_data()
         current_price = current_data[self.code].last_price
         if(self.portfolio_strategy_short == 0):
-            self.market_in()
+            self.market_in(current_price,self.system_high_short)
         else:
             self.stop_loss(current_price)
             self.market_add(current_price, g.ratio*cash, g.short_in_date)    
             self.market_out(current_price, g.short_out_date)
            
         if(self.portfolio_strategy_long == 0):
-            self.market_in()
+            self.market_in(current_price,self.system_high_long)
         else:
             self.stop_loss(current_price)
             self.market_add(current_price, g.ratio*cash, g.short_in_date)    
@@ -651,19 +651,14 @@ class StockInfo:
     # 输出：none
     def market_in(self,current_price, cash, in_date):
        #短时系统操作（买入，加仓，止损，清仓）
-       if(self.portfolio_strategy_short == 0):
-           unit,cash = self.calculate_unit(context)
-           # Build position if current price is higher than highest in past
-           current_data = get_current_data()
-           current_price = current_data[self.code].last_price
-           has_break_max = self.has_break_max(self.system_high_short)
-           if(has_break_max):
-           num_of_shares = cash/current_price
-           if num_of_shares >= unit:
-               if self.portfolio_strategy_short < int(g.unit_limit*unit):
-                   order(self.code, int(unit))
-                   self.portfolio_strategy_short += int(unit)
-                   self.break_price_short = current_price
+       has_break_max = self.has_break_max(self.system_high_short)
+       if(has_break_max):
+       num_of_shares = cash/current_price
+       if num_of_shares >= unit:
+           if self.portfolio_strategy_short < int(g.unit_limit*unit):
+               order(self.code, int(unit))
+               self.portfolio_strategy_short += int(unit)
+               self.break_price_short = current_price
           
        else:
 
