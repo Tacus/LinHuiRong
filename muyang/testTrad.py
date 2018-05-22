@@ -1,5 +1,5 @@
 #1、价格强势股的当前价格是否需要实时计算？√
-
+#2、海龟交易的计算起始日期是否是根据当前交易开始日期累计，还是往前推
 enable_profile()
 from jqdata import jy
 import jqdata
@@ -38,6 +38,45 @@ def init_stock_security_map(sw):
 sw1mapdf = init_stock_security_map(SW1)
 sw2mapdf = init_stock_security_map(SW2)
 
+def init_turtle_data():
+    # 系统1入市的trailing date
+    g.short_in_date = 20
+    # 系统2入市的trailing date
+    g.long_in_date = 55
+    # 系统1 exiting market trailing date
+    g.short_out_date = 10
+    # 系统2 exiting market trailing date
+    g.long_out_date = 20
+    # g.dollars_per_share是标的股票每波动一个最小单位，1手股票的总价格变化量。
+    # 在国内最小变化量是0.01元，所以就是0.01×100=1
+    g.dollars_per_share = 1
+    # 可承受的最大损失率
+    g.loss = 0.1
+    # 若超过最大损失率，则调整率为：
+    g.adjust = 0.8
+    # 计算N值的天数
+    g.number_days = 20
+    # 最大允许单元
+    g.unit_limit = 4
+    # 系统1所配金额占总金额比例
+    g.ratio = 0.8
+
+    g.unit = 1000
+    # A list storing info of N
+    g.N = []
+    # Record the number of days for this trading system
+    g.days = 0
+    # 系统1的突破价格
+    g.break_price1 = 0
+    # 系统2的突破价格
+    g.break_price2 = 0
+    # 系统1建的仓数
+    g.sys1 = 0
+    # 系统2建的仓数
+    g.sys2 = 0
+    # 系统1执行且系统2不执行
+    g.system1 = True
+
 def initialize(context):
     # g为全局变量
     g.sw1_weight = 1
@@ -60,6 +99,8 @@ def initialize(context):
 
     # g.debug_stocks = ["000729.XSHE"]
     g.debug_stocks = None
+
+    init_turtle_data()
 
 # 获取行业指数
 def get_SW_index(SW_index,start_date = '2017-01-31',end_date = '2018-01-31'):
@@ -496,11 +537,44 @@ class StockInfo:
         self.index = price_stock["index"]
         self.weight = price_stock["weight"]
         self.market_cap = eps_stock["market_cap"]
-    def __str__(self):
+        self._init_data()
+
+    def _init_data(self):
+        self.N = []
+    #计算海龟系统N
+    def calculate_n(self):
+        # 需要考虑停牌，上市交易天数过小
+        if(len(self.N) ==0):
+            price = attribute_history(self.code, g.number_days, '1d',('high','low','close'))
+            lst = []
+            for i in range(0, g.number_days):
+                h_l = price['high'][i]-price['low'][i]
+                h_c = price['high'][i]-price['close'][i]
+                c_l = price['close'][i]-price['low'][i]
+                # 计算 True Range
+                True_Range = max(h_l, h_c, c_l)
+                lst.append(True_Range)
+            # 计算前g.days（小于等于20）天的True_Range平均值，即当前N的值：
+            current_N = np.mean(np.array(lst))
+            (g.N).append(current_N)
+                
+            # 如果交易天数超过20天
+            else:
+                price = attribute_history(g.security, 1, '1d',('high','low','close'))
+                h_l = price['high'][0]-price['low'][0]
+                h_c = price['high'][0]-price['close'][0]
+                c_l = price['close'][0]-price['low'][0]
+                # Calculate the True Range
+                True_Range = max(h_l, h_c, c_l)
+                # 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
+                current_N = (True_Range + (g.number_days-1)*(g.N)[-1])/g.number_days
+                (g.N).append(current_N)
+        else:
+
+   def __str__(self):
         log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
         self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
-        return ""
-        
+        return ""     
 # 获取股票n日以来涨幅，根据当前价计算
 # n 默认20日
 def get_growth_rate(security, n=20):
@@ -513,6 +587,7 @@ def get_growth_rate(security, n=20):
     else:
         log.error("数据非法, security: %s, %d日收盘价: %f, 当前价: %f" %(security, n, lc, c))
         return 0
+
 
 # 获取前n个单位时间当时的收盘价
 def get_close_price(security, n, unit='1d'):
