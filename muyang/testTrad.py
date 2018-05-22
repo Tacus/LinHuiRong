@@ -1,5 +1,7 @@
 #1、价格强势股的当前价格是否需要实时计算？√
 #2、海龟交易的计算起始日期是否是根据当前交易开始日期累计，还是往前推
+#3、需要考虑停牌，上市交易天数过小,这时候是否需要参与交易
+
 enable_profile()
 from jqdata import jy
 import jqdata
@@ -159,6 +161,7 @@ def before_trading_start(context):
     g.valid_stocks = sorted(result,key = lambda d: d.market_cap,reverse = gr_index2>gr_index8)
     for single in g.valid_stocks:
         print(single)
+        single.calculate_n()
     # return g.valid_stocks
 
 def handle_data(context, data):
@@ -505,9 +508,24 @@ def get_total_eps_stocks(dt_str,code):
         return None
     eps = eps+get_adjust_eps(simple_df)
     return eps
+# 获取股票n日以来涨幅，根据当前价计算
+# n 默认20日
+
+def get_growth_rate(security, n=20):
+    lc = get_close_price(security, n)
+    #c = data[security].close
+    c = get_close_price(security, 1, '1m')
     
-    
-    
+    if not isnan(lc) and not isnan(c) and lc != 0:
+        return (c - lc) / lc
+    else:
+        log.error("数据非法, security: %s, %d日收盘价: %f, 当前价: %f" %(security, n, lc, c))
+        return 0
+
+
+# 获取前n个单位时间当时的收盘价
+def get_close_price(security, n, unit='1d'):
+    return attribute_history(security, n, unit, ('close'), True)['close'][0]
 class StockInfo:
     # def __init__(self, eps_ratio,eps_ratio2,year_eps_ratio, year_eps_ratio2):
     #     self.eps_ratio = eps_ratio
@@ -541,54 +559,107 @@ class StockInfo:
 
     def _init_data(self):
         self.N = []
+        self.portfolio_strategy_1 = 0
+        self.portfolio_strategy_2 = 0
+        df = attribute_history(self.code,g.short_in_date,"1d",("high","low"))
+        self.system_high_short = max(df.high)
+        self.system_low_short = min(df.low)
+
+        df = attribute_history(self.code,g.long_in_date,"1d",("high","low"))
+        self.system_high_long = max(df.high)
+        self.system_low_long = min(df.low)
+
     #计算海龟系统N
     def calculate_n(self):
-        # 需要考虑停牌，上市交易天数过小
-        if(len(self.N) ==0):
-            price = attribute_history(self.code, g.number_days, '1d',('high','low','close'))
+        # 需要考虑停牌，上市交易天数过小,这时候是否需要参与交易
+        if(len(self.N) == 0):
+            price = attribute_history(self.code, g.number_days*2, '1d',('high','low','close'))
             lst = []
-            for i in range(0, g.number_days):
+            for i in range(0, g.number_days*2):
+                if(np.isnan(price['high'])):
+                    continue
                 h_l = price['high'][i]-price['low'][i]
                 h_c = price['high'][i]-price['close'][i]
                 c_l = price['close'][i]-price['low'][i]
-                # 计算 True Range
+                # 计算 True Range 取计算第一天的前20天波动范围平均值
                 True_Range = max(h_l, h_c, c_l)
-                lst.append(True_Range)
-            # 计算前g.days（小于等于20）天的True_Range平均值，即当前N的值：
-            current_N = np.mean(np.array(lst))
-            (g.N).append(current_N)
-                
-            # 如果交易天数超过20天
-            else:
-                price = attribute_history(g.security, 1, '1d',('high','low','close'))
-                h_l = price['high'][0]-price['low'][0]
-                h_c = price['high'][0]-price['close'][0]
-                c_l = price['close'][0]-price['low'][0]
-                # Calculate the True Range
-                True_Range = max(h_l, h_c, c_l)
-                # 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
-                current_N = (True_Range + (g.number_days-1)*(g.N)[-1])/g.number_days
-                (g.N).append(current_N)
+                if(len(lst) < g.number_days):
+                    lst.append(True_Range)
+                else:
+                    if(len(self.N) == 0):
+                        current_N = np.mean(lst)
+                        (self.N).append(current_N)
+                    current_N = (True_Range + (g.number_days-1)*(self.N)[-1])/g.number_days
+                    (self.N).append(current_N)
         else:
+            price = attribute_history(self.code, 1, '1d',('high','low','close'))
+            h_l = price['high'][0]-price['low'][0]
+            h_c = price['high'][0]-price['close'][0]
+            c_l = price['close'][0]-price['low'][0]
+            # Calculate the True Range
+            True_Range = max(h_l, h_c, c_l)
+            # 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
+            current_N = (True_Range + (g.number_days-1)*(g.N)[-1])/g.number_days
+            (self.N).append(current_N)
+    #是否突破新高
+    def has_break_max(self,max_price):
+        current_data = get_current_data()
+        close = current_data[self.code].last_price
+        if(close > max_price):
+            return True
+        else:
+            return False
+    #是否创新低
+    def has_break_min(self,low_price):
+        current_data = get_current_data()
+        close = current_data[self.code].last_price
+        if(close < low_price):
+            return True
+        else:
+            return False
+
+    #尝试买入
+    def try_buy(self,context):
+        #短时系统操作（买入，加仓，止损，清仓）
+        if(self.portfolio_strategy_short == 0):
+            unit,cash = self.calculate_unit(context)
+            # Build position if current price is higher than highest in past
+            current_data = get_current_data()
+            current_price = current_data[self.code].last_price
+            has_break_max = self.has_break_max(self.system_high_short)
+            if(has_break_max):
+            num_of_shares = cash/current_price
+            if num_of_shares >= unit:
+                    if g.sys1 < int(g.unit_limit*g.unit):
+                        order(g.security, int(g.unit))
+                        g.sys1 += int(g.unit)
+                        g.break_price1 = current_price
+                else:
+                    if g.sys2 < int(g.unit_limit*g.unit):
+                        order(g.security, int(g.unit))
+                        g.sys2 += int(g.unit)
+                        g.break_price2 = current_price
+        else:
+
+        else:
+
+    #计算交易单位
+    def calculate_unit(self,context):
+        value = context.portfolio.portfolio_value
+        # 可花费的现金
+        cash = context.portfolio.cash 
+        if self.portfolio_strategy_1 == 0 and self.portfolio_strategy_1 == 0:
+            # 若损失率大于g.loss，则调整（减小）可持有现金和总价值
+            if value < (1-g.loss)*context.portfolio.starting_cash:
+                cash *= g.adjust
+                value *= g.adjust
+         # 计算波动的价格
+        dollar_volatility = g.dollars_per_share*(self.N)[-1]
+        # 依本策略，计算买卖的单位
+        unit = value*0.01/dollar_volatility
+        return unit,cash
 
    def __str__(self):
         log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
         self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
-        return ""     
-# 获取股票n日以来涨幅，根据当前价计算
-# n 默认20日
-def get_growth_rate(security, n=20):
-    lc = get_close_price(security, n)
-    #c = data[security].close
-    c = get_close_price(security, 1, '1m')
-    
-    if not isnan(lc) and not isnan(c) and lc != 0:
-        return (c - lc) / lc
-    else:
-        log.error("数据非法, security: %s, %d日收盘价: %f, 当前价: %f" %(security, n, lc, c))
-        return 0
-
-
-# 获取前n个单位时间当时的收盘价
-def get_close_price(security, n, unit='1d'):
-    return attribute_history(security, n, unit, ('close'), True)['close'][0]
+        return ""

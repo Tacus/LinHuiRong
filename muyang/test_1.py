@@ -1,6 +1,4 @@
-a = iter([1,2,"12312",3])
-result = next(a,None)
-while result:
-    print(result)
-    result = next(a,None)
+import numpy as np
 
+aa = [1,2,3]
+print(np.mean(aa))
