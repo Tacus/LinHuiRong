@@ -561,6 +561,12 @@ class StockInfo:
         self.N = []
         self.portfolio_strategy_1 = 0
         self.portfolio_strategy_2 = 0
+      
+        self.portfolio_strategy_short = 0
+        self.portfolio_strategy_long = 0
+
+    #每日更新当前数据
+    def run_daily(self,context):
         df = attribute_history(self.code,g.short_in_date,"1d",("high","low"))
         self.system_high_short = max(df.high)
         self.system_low_short = min(df.low)
@@ -568,6 +574,8 @@ class StockInfo:
         df = attribute_history(self.code,g.long_in_date,"1d",("high","low"))
         self.system_high_long = max(df.high)
         self.system_low_long = min(df.low)
+        self.calculate_unit(context)
+        self.calculate_n()
 
     #计算海龟系统N
     def calculate_n(self):
@@ -618,18 +626,71 @@ class StockInfo:
         else:
             return False
 
-    #尝试买入
-    def try_buy(self,context):
+    def start_process(self,context):
         #短时系统操作（买入，加仓，止损，清仓）
+        current_data = get_current_data()
+        current_price = current_data[self.code].last_price
         if(self.portfolio_strategy_short == 0):
-            unit,cash = self.calculate_unit(context)
-            # Build position if current price is higher than highest in past
-            current_data = get_current_data()
-            current_price = current_data[self.code].last_price
-            has_break_max = self.has_break_max(self.system_high_short)
-            if(has_break_max):
+            self.market_in()
+        else:
+            self.stop_loss(current_price)
+            self.market_add(current_price, g.ratio*cash, g.short_in_date)    
+            self.market_out(current_price, g.short_out_date)
+           
+        if(self.portfolio_strategy_long == 0):
+            self.market_in()
+        else:
+            self.stop_loss(current_price)
+            self.market_add(current_price, g.ratio*cash, g.short_in_date)    
+            self.market_out(current_price, g.short_out_date)
+
+    #6
+    # 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
+    # 海龟将所有资金分为2部分：一部分资金按系统1执行，一部分资金按系统2执行
+    # 输入：当前价格-float, 现金-float, 天数-int
+    # 输出：none
+    def market_in(self,current_price, cash, in_date):
+       #短时系统操作（买入，加仓，止损，清仓）
+       if(self.portfolio_strategy_short == 0):
+           unit,cash = self.calculate_unit(context)
+           # Build position if current price is higher than highest in past
+           current_data = get_current_data()
+           current_price = current_data[self.code].last_price
+           has_break_max = self.has_break_max(self.system_high_short)
+           if(has_break_max):
+           num_of_shares = cash/current_price
+           if num_of_shares >= unit:
+               if self.portfolio_strategy_short < int(g.unit_limit*unit):
+                   order(self.code, int(unit))
+                   self.portfolio_strategy_short += int(unit)
+                   self.break_price_short = current_price
+          
+       else:
+
+       else:
+
+
+    #7
+    # 加仓函数
+    # 输入：当前价格-float, 现金-float, 天数-int
+    # 输出：none
+    def market_add(current_price, cash, in_date):
+        if g.system1 == True:
+            break_price=g.break_price1
+        else:
+            break_price=g.break_price2
+        # 每上涨0.5N，加仓一个单元
+        if current_price >= break_price + 0.5*(g.N)[-1]: 
             num_of_shares = cash/current_price
-            if num_of_shares >= unit:
+            # 加仓
+            if num_of_shares >= g.unit: 
+                print "加仓"
+                print g.sys1
+                print g.sys2
+                print current_price
+                print break_price + 0.5*(g.N)[-1]
+           
+                if g.system1 == True:
                     if g.sys1 < int(g.unit_limit*g.unit):
                         order(g.security, int(g.unit))
                         g.sys1 += int(g.unit)
@@ -639,25 +700,67 @@ class StockInfo:
                         order(g.security, int(g.unit))
                         g.sys2 += int(g.unit)
                         g.break_price2 = current_price
-        else:
 
+
+    #8
+    # 离场函数
+    # 输入：当前价格-float, 天数-int
+    # 输出：none
+    def market_out(current_price, out_date):
+        # Function for leaving the market
+        price = attribute_history(g.security, out_date, '1d', ('close'))
+        # 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
+        if current_price < min(price['close']):
+            print "离场"
+            print current_price
+            print min(price['close'])
+            if g.system1 == True:
+                if g.sys1>0:
+                    order(g.security, -g.sys1)
+                    g.sys1 = 0
+            else:
+                if g.sys2>0:
+                    order(g.security, -g.sys2)
+                    g.sys2 = 0
+
+
+    #9
+    # 止损函数
+    # 输入：当前价格-float
+    # 输出：none
+    def stop_loss(current_price):
+        # 损失大于2N，卖出股票
+        if g.system1 == True:
+            break_price = g.break_price1
         else:
+            break_price = g.break_price2
+        # If the price has decreased by 2N, then clear all position
+        if current_price < (break_price - 2*(g.N)[-1]):
+            print "止损"
+            print current_price
+            print break_price - 2*(g.N)[-1]
+            if g.system1 == True:
+                order(g.security, -g.sys1)
+                g.sys1 = 0  
+            else:
+                order(g.security, -g.sys2)
+                g.sys2 = 0
+
 
     #计算交易单位
     def calculate_unit(self,context):
         value = context.portfolio.portfolio_value
         # 可花费的现金
-        cash = context.portfolio.cash 
+        self.cash = context.portfolio.cash 
         if self.portfolio_strategy_1 == 0 and self.portfolio_strategy_1 == 0:
             # 若损失率大于g.loss，则调整（减小）可持有现金和总价值
             if value < (1-g.loss)*context.portfolio.starting_cash:
-                cash *= g.adjust
+                self.cash *= g.adjust
                 value *= g.adjust
          # 计算波动的价格
         dollar_volatility = g.dollars_per_share*(self.N)[-1]
         # 依本策略，计算买卖的单位
-        unit = value*0.01/dollar_volatility
-        return unit,cash
+        self.unit = value*0.01/dollar_volatility
 
    def __str__(self):
         log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
