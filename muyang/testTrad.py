@@ -651,12 +651,12 @@ class StockInfo:
     # 输出：none
     def market_in(self,current_price, cash, in_date):
        #短时系统操作（买入，加仓，止损，清仓）
-       has_break_max = self.has_break_max(self.system_high_short)
-       if(has_break_max):
-       num_of_shares = cash/current_price
-       if num_of_shares >= unit:
-           if self.portfolio_strategy_short < int(g.unit_limit*unit):
-               order(self.code, int(unit))
+        has_break_max = self.has_break_max(self.system_high_short)
+        if(has_break_max):
+            num_of_shares = cash/current_price
+        if num_of_shares >= self.unit:
+            if self.portfolio_strategy_short < int(g.unit_limit*unit):
+               order(self.code, int(self.unit))
                self.portfolio_strategy_short += int(unit)
                self.break_price_short = current_price
           
