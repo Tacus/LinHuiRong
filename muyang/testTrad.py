@@ -558,12 +558,15 @@ class StockInfo:
         self._init_data()
 
     def _init_data(self):
-        self.N = []
-        self.portfolio_strategy_1 = 0
-        self.portfolio_strategy_2 = 0
-      
-        self.portfolio_strategy_short = 0
-        self.portfolio_strategy_long = 0
+        self.N = [
+        short_sys_data = {}
+        long_sys_data = {}
+        self.sys_dict = {}   
+        self.sys_dict[short_sys_key] = short_sys_data
+        self.sys_dict[long_sys_key] = long_sys_data
+        short_sys_data["portfolio_strategy_short"] = 0
+        long_sys_data["portfolio_strategy_long"] = 0
+
 
     #每日更新当前数据
     def run_daily(self,context):
@@ -610,17 +613,13 @@ class StockInfo:
             current_N = (True_Range + (g.number_days-1)*(g.N)[-1])/g.number_days
             (self.N).append(current_N)
     #是否突破新高
-    def has_break_max(self,max_price):
-        current_data = get_current_data()
-        close = current_data[self.code].last_price
+    def has_break_max(self,close,max_price):
         if(close > max_price):
             return True
         else:
             return False
     #是否创新低
-    def has_break_min(self,low_price):
-        current_data = get_current_data()
-        close = current_data[self.code].last_price
+    def has_break_min(self,close,low_price):
         if(close < low_price):
             return True
         else:
@@ -630,19 +629,21 @@ class StockInfo:
         #短时系统操作（买入，加仓，止损，清仓）
         current_data = get_current_data()
         current_price = current_data[self.code].last_price
+        cash = context.portfolio.cash
+        value = context.portfolio.portfolio_value
         if(self.portfolio_strategy_short == 0):
-            self.market_in(current_price,self.system_high_short)
+            self.market_in(current_price,cash,self.system_high_short)
         else:
             self.stop_loss(current_price)
             self.market_add(current_price, g.ratio*cash, g.short_in_date)    
             self.market_out(current_price, g.short_out_date)
            
-        if(self.portfolio_strategy_long == 0):
-            self.market_in(current_price,self.system_high_long)
-        else:
-            self.stop_loss(current_price)
-            self.market_add(current_price, g.ratio*cash, g.short_in_date)    
-            self.market_out(current_price, g.short_out_date)
+        # if(self.portfolio_strategy_long == 0):
+        #     self.market_in(current_price,self.system_high_long)
+        # else:
+        #     self.stop_loss(current_price)
+        #     self.market_add(current_price, g.ratio*cash, g.short_in_date)    
+        #     self.market_out(current_price, g.short_out_date)
 
     #6
     # 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
@@ -651,50 +652,30 @@ class StockInfo:
     # 输出：none
     def market_in(self,current_price, cash, in_date):
        #短时系统操作（买入，加仓，止损，清仓）
-        has_break_max = self.has_break_max(self.system_high_short)
+        has_break_max = self.has_break_max(current_price,self.system_high_short)
         if(has_break_max):
             num_of_shares = cash/current_price
-        if num_of_shares >= self.unit:
-            if self.portfolio_strategy_short < int(g.unit_limit*unit):
-               order(self.code, int(self.unit))
-               self.portfolio_strategy_short += int(unit)
-               self.break_price_short = current_price
+            if num_of_shares >= self.unit:
+                if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
+                   order(self.code, int(self.unit))
+                   self.portfolio_strategy_short += int(self.unit)
+                   self.break_price_short = current_price
           
-       else:
-
-       else:
-
-
     #7
     # 加仓函数
     # 输入：当前价格-float, 现金-float, 天数-int
     # 输出：none
     def market_add(current_price, cash, in_date):
-        if g.system1 == True:
-            break_price=g.break_price1
-        else:
-            break_price=g.break_price2
+        break_price = self.break_price_short
         # 每上涨0.5N，加仓一个单元
-        if current_price >= break_price + 0.5*(g.N)[-1]: 
+        if current_price >= break_price + 0.5*(self.N)[-1]: 
             num_of_shares = cash/current_price
-            # 加仓
-            if num_of_shares >= g.unit: 
+            if num_of_shares >= self.unit: 
                 print "加仓"
-                print g.sys1
-                print g.sys2
-                print current_price
-                print break_price + 0.5*(g.N)[-1]
-           
-                if g.system1 == True:
-                    if g.sys1 < int(g.unit_limit*g.unit):
-                        order(g.security, int(g.unit))
-                        g.sys1 += int(g.unit)
-                        g.break_price1 = current_price
-                else:
-                    if g.sys2 < int(g.unit_limit*g.unit):
-                        order(g.security, int(g.unit))
-                        g.sys2 += int(g.unit)
-                        g.break_price2 = current_price
+                if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
+                    order(self.code, int(self.unit))
+                    self.portfolio_strategy_short += int(self.unit)
+                    self.break_price_short = current_price
 
 
     #8
@@ -703,21 +684,15 @@ class StockInfo:
     # 输出：none
     def market_out(current_price, out_date):
         # Function for leaving the market
-        price = attribute_history(g.security, out_date, '1d', ('close'))
+        has_break_min = self.has_break_min(current_price ,self.system_high_short)
         # 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
-        if current_price < min(price['close']):
+        if has_break_min:
             print "离场"
             print current_price
-            print min(price['close'])
-            if g.system1 == True:
-                if g.sys1>0:
-                    order(g.security, -g.sys1)
-                    g.sys1 = 0
-            else:
-                if g.sys2>0:
-                    order(g.security, -g.sys2)
-                    g.sys2 = 0
-
+            # print min(price['close'])
+            if self.portfolio_strategy_short > 0:
+                order(self.code, -self.portfolio_strategy_short)
+                self.portfolio_strategy_short = 0
 
     #9
     # 止损函数
@@ -725,21 +700,15 @@ class StockInfo:
     # 输出：none
     def stop_loss(current_price):
         # 损失大于2N，卖出股票
-        if g.system1 == True:
-            break_price = g.break_price1
-        else:
-            break_price = g.break_price2
+        break_price = self.break_price_short
         # If the price has decreased by 2N, then clear all position
-        if current_price < (break_price - 2*(g.N)[-1]):
+        if current_price < (break_price - 2*(self.N)[-1]):
             print "止损"
             print current_price
-            print break_price - 2*(g.N)[-1]
-            if g.system1 == True:
-                order(g.security, -g.sys1)
-                g.sys1 = 0  
-            else:
-                order(g.security, -g.sys2)
-                g.sys2 = 0
+            # print break_price - 2*(g.N)[-1]
+            order(self.code, - self.portfolio_strategy_short)
+            self.portfolio_strategy_short = 0  
+
 
 
     #计算交易单位

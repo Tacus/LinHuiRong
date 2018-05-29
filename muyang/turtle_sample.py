@@ -123,6 +123,7 @@ def handle_data(context, data):
         cash = context.portfolio.cash 
         if g.sys1 == 0 and g.sys2 == 0:
             # 若损失率大于g.loss，则调整（减小）可持有现金和总价值
+            ######## value仅仅是持仓市值，此处比较不合理（value+cash 一起比较才合理)
             if value < (1-g.loss)*context.portfolio.starting_cash:
                 cash *= g.adjust
                 value *= g.adjust
