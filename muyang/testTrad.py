@@ -558,7 +558,7 @@ class StockInfo:
         self._init_data()
 
     def _init_data(self):
-        self.N = [
+        self.N = []
         short_sys_data = {}
         long_sys_data = {}
         self.sys_dict = {}   
