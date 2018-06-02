@@ -1,6 +1,7 @@
 #1、价格强势股的当前价格是否需要实时计算？√
 #2、海龟交易的计算起始日期是否是根据当前交易开始日期累计，还是往前推
 #3、需要考虑停牌，上市交易天数过小,这时候是否需要参与交易
+#4、止损部分：加仓三次，止损计算针对的是每次加仓时的数据，还是最后一次
 
 enable_profile()
 from jqdata import jy
@@ -15,6 +16,64 @@ from jy_sw_industry_code import *
 jydf = jy.run_query(query(jy.SecuMain))
 
 index_list = ['OpenPrice','ClosePrice']
+
+
+def initialize(context):
+    # g为全局变量
+    g.sw1_weight = 1
+    g.sw2_weight = 3
+    g.stock_weight = 6
+    
+    #个股均线周期
+    g.avg_period_1 = 50 
+    g.avg_period_2 = 150
+    g.avg_period_3 = 200
+    #个股涨幅周期
+    g.min_increase_period = 250
+    g.max_increase_period = 250
+    #个股上市最小自然日
+    g.stock_listDays = 300 #420
+    #指数涨幅计算自然日区间
+    g.industry_rangeDays = 120
+    #个股涨幅计算自然日区间
+    g.stock_rangeDays = 250 #250
+
+    # g.debug_stocks = ["000729.XSHE"]
+    g.debug_stocks = None
+    g.stock_pool = []
+    g.position_pool = {}
+    init_turtle_data()
+
+#获取有效股票并更新有效股票历史数据 price_info,eps_info
+def before_trading_start(context):
+    g.stock_pool = get_valid_stocks(context)
+    for single in g.stock_pool:
+        single.run_daily()
+
+    for _,stock_info in g.position_pool.items():
+        stock_info.run_daily()
+    # return g.valid_stocks
+
+def handle_data(context, data):
+
+    for _,stock_info in g.position_pool.items():
+        order = stock_info.start_process()
+        if order.filled  > 0 and order.is_buy :
+            single.add_buy_count( order.filled)
+        elif(order.filled > 0 and not order.is_buy):
+            single.reduce_buy_count( order.filled)
+            count = single.get_buy_count()
+            if(count <= 0):
+                g.position_pool[single.code] = None
+
+    for single in g.stock_pool:
+        order = single.start_process()
+        if order.filled  > 0 and order.is_buy :
+            single.set_buy_count( order.filled)
+            g.stock_pool.remove(single)
+            g.position_pool[single.code] = single
+    #订单追踪
+
 
 #行业映射成分股    
 #sw 申万指数代码
@@ -77,32 +136,7 @@ def init_turtle_data():
     # 系统2建的仓数
     g.sys2 = 0
     # 系统1执行且系统2不执行
-    g.system1 = True
-
-def initialize(context):
-    # g为全局变量
-    g.sw1_weight = 1
-    g.sw2_weight = 3
-    g.stock_weight = 6
-    
-    #个股均线周期
-    g.avg_period_1 = 50 
-    g.avg_period_2 = 150
-    g.avg_period_3 = 200
-    #个股涨幅周期
-    g.min_increase_period = 250
-    g.max_increase_period = 250
-    #个股上市最小自然日
-    g.stock_listDays = 300 #420
-    #指数涨幅计算自然日区间
-    g.industry_rangeDays = 120
-    #个股涨幅计算自然日区间
-    g.stock_rangeDays = 250 #250
-
-    # g.debug_stocks = ["000729.XSHE"]
-    g.debug_stocks = None
-
-    init_turtle_data()
+    g.system1 = True    
 
 # 获取行业指数
 def get_SW_index(SW_index,start_date = '2017-01-31',end_date = '2018-01-31'):
@@ -123,8 +157,8 @@ def secuindex_sort(el1,el2):
         return 0
     else:
         return -1
-
-def before_trading_start(context):
+#获取有效的eps price条件股票
+def get_valid_stocks(context):
     cur_date = context.current_dt
     g.all_trade_days = jqdata.get_trade_days(count = 300)
     start_date = g.all_trade_days[-g.industry_rangeDays]
@@ -147,7 +181,7 @@ def before_trading_start(context):
                 # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,\最近年度eps增长率：%s%%,%s%%,%s%%"%(stock,
                 # price_stock["security_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
                 # eps_stock["eps_ratio"],year_eps_ratio3,year_eps_ratio2,eps_stock["year_eps_ratio"]))
-                stInfo = StockInfo(price_stock,eps_stock)
+                stInfo = get_stock_info(price_stock,eps_stock)
                 result.append(stInfo)
                 # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%"%(stock,
                 # price_stock["security_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
@@ -158,14 +192,19 @@ def before_trading_start(context):
         log.info("当前大盘强于小盘",gr_index2,gr_index8)
     else:
         log.info("当前小盘强于大盘",gr_index2,gr_index8)
-    g.valid_stocks = sorted(result,key = lambda d: d.market_cap,reverse = gr_index2>gr_index8)
-    for single in g.valid_stocks:
-        print(single)
-        single.calculate_n()
-    # return g.valid_stocks
+    result = sorted(result,key = lambda d: d.market_cap,reverse = gr_index2>gr_index8)
+    return result
 
-def handle_data(context, data):
-    
+def get_stock_info(price_info,eps_info):
+    code = eps_stock["code"]
+    exsit = False
+    for code_,stock_info in g.position_pool.items():
+        if(code == code_):
+            stock_info.update_info(price_info,eps_info)
+            exsit = True
+            break
+    if not exsit:
+        return StockInfo(price_stock,eps_stock)
 
 def common_get_weight(list):
     size = len(list)
@@ -526,6 +565,22 @@ def get_growth_rate(security, n=20):
 # 获取前n个单位时间当时的收盘价
 def get_close_price(security, n, unit='1d'):
     return attribute_history(security, n, unit, ('close'), True)['close'][0]
+
+#抽象策略交易类
+#1、选股
+#2、开仓、加仓
+#3、止损离场
+
+class Strategy:
+    def __init__(self):
+        pass
+    def filter_stocks(self):
+        pass
+    def market_in(self):
+        pass
+    def market_out(self):
+        pass
+
 class StockInfo:
     #初始化，价格信息，eps信息
     def __init__(self, price_info,eps_info):
@@ -632,19 +687,20 @@ class StockInfo:
         current_price = current_data[self.code].last_price
         cash = context.portfolio.cash
         value = context.portfolio.portfolio_value
+        order = None
         if(self.portfolio_strategy_short == 0):
-            self.market_in(current_price,cash,self.system_high_short)
+            order = self.try_market_in(current_price,cash,self.system_high_short)
         else:
-            self.stop_loss(current_price)
-            self.market_add(current_price, g.ratio*cash, g.short_in_date)    
-            self.market_out(current_price, g.short_out_date)
+            order = self.try_stop_loss(current_price)
+            order = self.try_market_add(current_price, g.ratio*cash, g.short_in_date)    
+            order = self.try_market_out(current_price, g.short_out_date)
     #6
     # 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
     # 海龟将所有资金分为2部分：一部分资金按系统1执行，一部分资金按系统2执行
     # 输入：当前价格-float, 现金-float, 天数-int
     # 输出：none
     #暂时只考虑一个系统运行情况
-    def market_in(self,current_price, cash, in_date):
+    def try_market_in(self,current_price, cash, in_date):
        #短时系统操作是否可以入市
         has_break_max = self.has_break_max(current_price,self.system_high_short)
         if(not has_break_max):
@@ -652,16 +708,18 @@ class StockInfo:
         num_of_shares = cash/current_price
         if num_of_shares < self.unit:
             return
+        order = None
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
-           order(self.code, int(self.unit))
-           self.portfolio_strategy_short += int(self.unit)
-           self.break_price_short = current_price
-          
+            print "开仓"
+            order = order(self.code, int(self.unit))
+            self.portfolio_strategy_short += int(self.unit)
+            self.break_price_short = current_price
+        return order 
     #7
     # 加仓函数
     # 输入：当前价格-float, 现金-float, 天数-int
     # 输出：none
-    def market_add(self,current_price, cash, in_date):
+    def try_market_add(self,current_price, cash, in_date):
         break_price = self.break_price_short
         # 每上涨0.5N，加仓一个单元
         if current_price < break_price + 0.5*(self.N)[-1]: 
@@ -671,16 +729,17 @@ class StockInfo:
             return
 
         print "加仓"
+        order = None
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
-            order(self.code, int(self.unit))
+            order = order(self.code, int(self.unit))
             self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
-
+        return order
     #8
     # 离场函数
     # 输入：当前价格-float, 天数-int
     # 输出：none
-    def market_out(self,current_price, out_date):
+    def try_market_out(self,current_price, out_date):
         # Function for leaving the market
         has_break_min = self.has_break_min(current_price ,self.system_high_short)
         # 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
@@ -689,25 +748,27 @@ class StockInfo:
         print "离场"
         print current_price
         # print min(price['close'])
+        order = None
         if self.portfolio_strategy_short > 0:
-            order(self.code, -self.portfolio_strategy_short)
             self.portfolio_strategy_short = 0
-
+            order = order(self.code, -self.portfolio_strategy_short)
+        return order
     #9
     # 止损函数
     # 输入：当前价格-float
     # 输出：none
-    def stop_loss(self,current_price):
+    def try_stop_loss(self,current_price):
         # 损失大于2N，卖出股票
         break_price = self.break_price_short
         # If the price has decreased by 2N, then clear all position
+        order = None
         if current_price < (break_price - 2*(self.N)[-1]):
             print "止损"
             print current_price
             # print break_price - 2*(g.N)[-1]
-            order(self.code, - self.portfolio_strategy_short)
             self.portfolio_strategy_short = 0  
-
+            order = order(self.code, - self.portfolio_strategy_short)
+        return order
     #计算交易单位
     def calculate_unit(self,context):
         value = context.portfolio.portfolio_value
@@ -716,7 +777,34 @@ class StockInfo:
         # 依本策略，计算买卖的单位
         self.unit = value*0.01/dollar_volatility
 
-   def __str__(self):
+    #加仓数量
+    def add_buy_count(self,count):
+        self.portfolio_strategy_short += count
+
+     #减仓数量
+    def reduce_buy_count(self,count):
+        self.portfolio_strategy_short -= count
+
+     #获得仓位数量
+    def get_buy_count(self,count):
+        return self.portfolio_strategy_short
+
+     #设置仓位数量
+    def set_buy_count(self,count):
+        self.portfolio_strategy_short = count
+        
+    def __str__(self):
         log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
         self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
         return ""
+#股票管理类
+class StockManager():
+    def __init__(self):
+        pass
+    def init_data(self):
+        self.daliy_pool = []
+        pass
+    def daily_process(self):
+        pass
+    def daily_end(self):
+        pass
