@@ -164,7 +164,7 @@ def get_valid_stocks(context):
     start_date = g.all_trade_days[-g.industry_rangeDays]
     sortedList_level1 = get_ratioandsort(SW1,start_date,cur_date)
     sortedList_level2 = get_ratioandsort(SW2,start_date,cur_date)
-    mighty_price_list = get_mighty_price_stocks(context,data,sortedList_level1,sortedList_level2)
+    mighty_price_list = get_mighty_price_stocks(context,sortedList_level1,sortedList_level2)
     mighty_eps_list = get_mighty_eps_stocks(context,g.debug_stocks)
     result = []
     for stock,price_stock in mighty_price_list.items():
@@ -247,7 +247,7 @@ def get_day_extreme(securitylist,days,method):
     return result
 
 # 获取价格强势股
-def get_mighty_price_stocks(context,data,sw1dict,sw2dict):
+def get_mighty_price_stocks(context,sw1dict,sw2dict):
     # start_date = context.current_dt + datetime.timedelta(days = -g.stock_listDays)
     # start_date = start_date.date()
     start_date = g.all_trade_days[-g.stock_listDays]
@@ -300,11 +300,12 @@ def get_mighty_price_stocks(context,data,sw1dict,sw2dict):
     index = 1
     fileter_securitys = {}
     stocks = []
+    data = get_current_data()
     for x in result:
         # security_name = sw1mapdf.loc[x["secu"]]
         security = x["secu"]
         security_name = sw1mapdf[sw1mapdf["code"] == security]
-        close = data[security].close
+        close = data[security].last_price
         security_avg1 = avg_1[security]
         security_avg2 = avg_2[security]
         security_avg3 = avg_3[security]
@@ -792,7 +793,7 @@ class StockInfo:
      #设置仓位数量
     def set_buy_count(self,count):
         self.portfolio_strategy_short = count
-        
+
     def __str__(self):
         log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
         self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
