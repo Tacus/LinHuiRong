@@ -675,7 +675,7 @@ class StockInfo:
             # Calculate the True Range
             True_Range = max(h_l, h_c, c_l)
             # 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
-            current_N = (True_Range + (g.number_days-1)*(g.N)[-1])/g.number_days
+            current_N = (True_Range + (g.number_days-1)*(self.N)[-1])/g.number_days
             (self.N).append(current_N)
     #是否突破新高
     def has_break_max(self,close,max_price):
@@ -778,7 +778,7 @@ class StockInfo:
             # print break_price - 2*(g.N)[-1]
             # self.portfolio_strategy_short = 0  
             order_info = order(self.code, - self.portfolio_strategy_short)
-        return order_infox
+        return order_info
     #计算交易单位
     def calculate_unit(self,context):
         value = context.portfolio.portfolio_value
