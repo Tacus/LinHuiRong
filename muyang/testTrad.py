@@ -59,12 +59,12 @@ def handle_data(context, data):
     for _,stock_info in g.position_pool.items():
         order = stock_info.start_process(context)
         if order != None and order.filled  > 0 and order.is_buy :
-            single.add_buy_count( order.filled)
+            stock_info.add_buy_count( order.filled)
         elif(order != None and order.filled > 0 and not order.is_buy):
-            single.reduce_buy_count( order.filled)
-            count = single.get_buy_count()
+            stock_info.reduce_buy_count( order.filled)
+            count = stock_info.get_buy_count()
             if(count <= 0):
-                g.position_pool[single.code] = None
+                g.position_pool[stock_info.code] = None
 
     for single in g.stock_pool:
         order = single.start_process(context)
