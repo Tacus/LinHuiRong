@@ -637,8 +637,8 @@ class StockInfo:
         df = attribute_history(self.code,g.long_in_date,"1d",("high","low"))
         self.system_high_long = max(df.high)
         self.system_low_long = min(df.low)
-        self.calculate_unit(context)
         self.calculate_n()
+        self.calculate_unit(context)
 
     #计算海龟系统N
     def calculate_n(self):
