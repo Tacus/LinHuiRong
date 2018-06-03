@@ -38,7 +38,7 @@ def initialize(context):
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
 
-    # g.debug_stocks = ["000729.XSHE"]
+    g.debug_stocks = ["000729.XSHE"]
     g.debug_stocks = None
     g.stock_pool = []
     g.position_pool = {}
@@ -48,10 +48,10 @@ def initialize(context):
 def before_trading_start(context):
     g.stock_pool = get_valid_stocks(context)
     for single in g.stock_pool:
-        single.run_daily()
+        single.run_daily(context)
 
     for _,stock_info in g.position_pool.items():
-        stock_info.run_daily()
+        stock_info.run_daily(context)
     # return g.valid_stocks
 
 def handle_data(context, data):
@@ -136,7 +136,10 @@ def init_turtle_data():
     # 系统2建的仓数
     g.sys2 = 0
     # 系统1执行且系统2不执行
-    g.system1 = True    
+    g.system1 = True  
+
+    g.short_sys_key = "short_sys_key"  
+    g.long_sys_key = "long_sys_key"
 
 # 获取行业指数
 def get_SW_index(SW_index,start_date = '2017-01-31',end_date = '2018-01-31'):
@@ -196,7 +199,7 @@ def get_valid_stocks(context):
     return result
 
 def get_stock_info(price_info,eps_info):
-    code = eps_stock["code"]
+    code = eps_info["code"]
     exsit = False
     for code_,stock_info in g.position_pool.items():
         if(code == code_):
@@ -204,7 +207,7 @@ def get_stock_info(price_info,eps_info):
             exsit = True
             break
     if not exsit:
-        return StockInfo(price_stock,eps_stock)
+        return StockInfo(price_info,eps_info)
 
 def common_get_weight(list):
     size = len(list)
@@ -406,7 +409,7 @@ def get_mighty_eps_stocks(context,securitys=None):
         dt = datetime.datetime.strptime(dt_str, '%Y-%m-%d')
         code = cldata.code
         eps = cldata.eps*cldata.adjusted_profit_to_profit/100
-        print(str.format("eps:%s,rps:%s,eps:%s"%(cldata.eps,cldata.adjusted_profit_to_profit,eps)))
+        # print(str.format("eps:%s,rps:%s,eps:%s"%(cldata.eps,cldata.adjusted_profit_to_profit,eps)))
         market_cap = cldata.circulating_market_cap
         
         last_dt = get_last_reason_date(dt,0,1)
@@ -425,7 +428,7 @@ def get_mighty_eps_stocks(context,securitys=None):
         last_eps = get_adjust_eps(single_df)
         last_eps2 = get_adjust_eps(single_df2)
         last_eps3 = get_adjust_eps(single_df3)
-        print(str.format("eps:%s,eps2:%s,eps3:%s"%(last_eps,last_eps2,last_eps3)))
+        # print(str.format("eps:%s,eps2:%s,eps3:%s"%(last_eps,last_eps2,last_eps3)))
         ratio = (eps - last_eps)/last_eps
         ratio2 = (last_eps2 - last_eps3)/last_eps3
         # x["eps_ratio"] = math.floor(ratio*100)
@@ -617,8 +620,8 @@ class StockInfo:
         short_sys_data = {}
         long_sys_data = {}
         self.sys_dict = {}   
-        self.sys_dict[short_sys_key] = short_sys_data
-        self.sys_dict[long_sys_key] = long_sys_data
+        self.sys_dict[g.short_sys_key] = short_sys_data
+        self.sys_dict[g.long_sys_key] = long_sys_data
         short_sys_data["portfolio_strategy_short"] = 0
         long_sys_data["portfolio_strategy_long"] = 0
         self.year_eps_ratio2 = None
