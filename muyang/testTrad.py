@@ -64,7 +64,7 @@ def handle_data(context, data):
             stock_info.reduce_buy_count( order.filled)
             count = stock_info.get_buy_count()
             if(count <= 0):
-                g.position_pool[stock_info.code] = None
+                del g.position_pool[stock_info.code]
 
     for single in g.stock_pool:
         order = single.start_process(context)
@@ -796,7 +796,7 @@ class StockInfo:
         self.portfolio_strategy_short -= count
 
      #获得仓位数量
-    def get_buy_count(self,count):
+    def get_buy_count(self):
         return self.portfolio_strategy_short
 
      #设置仓位数量
