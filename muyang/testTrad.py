@@ -38,7 +38,7 @@ def initialize(context):
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
 
-    g.debug_stocks = ["000729.XSHE"]
+    # g.debug_stocks = ["000729.XSHE"]
     g.debug_stocks = None
     g.stock_pool = []
     g.position_pool = {}
@@ -57,18 +57,18 @@ def before_trading_start(context):
 def handle_data(context, data):
 
     for _,stock_info in g.position_pool.items():
-        order = stock_info.start_process()
-        if order.filled  > 0 and order.is_buy :
+        order = stock_info.start_process(context)
+        if order != None and order.filled  > 0 and order.is_buy :
             single.add_buy_count( order.filled)
-        elif(order.filled > 0 and not order.is_buy):
+        elif(order != None and order.filled > 0 and not order.is_buy):
             single.reduce_buy_count( order.filled)
             count = single.get_buy_count()
             if(count <= 0):
                 g.position_pool[single.code] = None
 
     for single in g.stock_pool:
-        order = single.start_process()
-        if order.filled  > 0 and order.is_buy :
+        order = single.start_process(context)
+        if order != None and order.filled  > 0 and order.is_buy :
             single.set_buy_count( order.filled)
             g.stock_pool.remove(single)
             g.position_pool[single.code] = single
@@ -185,7 +185,8 @@ def get_valid_stocks(context):
                 # price_stock["security_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
                 # eps_stock["eps_ratio"],year_eps_ratio3,year_eps_ratio2,eps_stock["year_eps_ratio"]))
                 stInfo = get_stock_info(price_stock,eps_stock)
-                result.append(stInfo)
+                if(stInfo != None):
+                    result.append(stInfo)
                 # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%"%(stock,
                 # price_stock["security_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
                 # eps_stock["eps_ratio"]))
@@ -609,6 +610,9 @@ class StockInfo:
            self.year_eps_ratio3 = eps_info["year_eps_ratio3"]
         if eps_info.has_key("year_eps_ratio"):
            self.year_eps_ratio = eps_info["year_eps_ratio"]
+        if(self.market_cap == None):
+            self.market_cap = 0
+            log.info("error:market_cap is none code:%s"%(self.code))
     #更新
     def update_info(self,price_info,eps_info):
         self.update_price_info(price_info)
@@ -627,6 +631,7 @@ class StockInfo:
         self.year_eps_ratio2 = None
         self.year_eps_ratio3 = None
         self.year_eps_ratio = None
+        self.portfolio_strategy_short = 0
 
     #每日更新当前数据信息
     def run_daily(self,context):
@@ -647,7 +652,7 @@ class StockInfo:
             price = attribute_history(self.code, g.number_days*2, '1d',('high','low','close'))
             lst = []
             for i in range(0, g.number_days*2):
-                if(np.isnan(price['high'])):
+                if(np.isnan(price['high'][i])):
                     continue
                 h_l = price['high'][i]-price['low'][i]
                 h_c = price['high'][i]-price['close'][i]
@@ -691,13 +696,14 @@ class StockInfo:
         current_price = current_data[self.code].last_price
         cash = context.portfolio.cash
         value = context.portfolio.portfolio_value
-        order = None
+        order_info = None
         if(self.portfolio_strategy_short == 0):
-            order = self.try_market_in(current_price,cash,self.system_high_short)
+            order_info = self.try_market_in(current_price,cash,self.system_high_short)
         else:
-            order = self.try_stop_loss(current_price)
-            order = self.try_market_add(current_price, g.ratio*cash, g.short_in_date)    
-            order = self.try_market_out(current_price, g.short_out_date)
+            order_info = self.try_stop_loss(current_price)
+            order_info = self.try_market_add(current_price, g.ratio*cash, g.short_in_date)    
+            order_info = self.try_market_out(current_price, g.short_out_date)
+        return order_info
     #6
     # 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
     # 海龟将所有资金分为2部分：一部分资金按系统1执行，一部分资金按系统2执行
@@ -712,13 +718,13 @@ class StockInfo:
         num_of_shares = cash/current_price
         if num_of_shares < self.unit:
             return
-        order = None
+        order_info = None
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
             print "开仓"
-            order = order(self.code, int(self.unit))
-            self.portfolio_strategy_short += int(self.unit)
+            order_info = order(self.code, int(self.unit))
+            # self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
-        return order 
+        return order_info 
     #7
     # 加仓函数
     # 输入：当前价格-float, 现金-float, 天数-int
@@ -733,12 +739,12 @@ class StockInfo:
             return
 
         print "加仓"
-        order = None
+        order_info = None
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
-            order = order(self.code, int(self.unit))
-            self.portfolio_strategy_short += int(self.unit)
+            order_info = order(self.code, int(self.unit))
+            # self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
-        return order
+        return order_info
     #8
     # 离场函数
     # 输入：当前价格-float, 天数-int
@@ -752,11 +758,11 @@ class StockInfo:
         print "离场"
         print current_price
         # print min(price['close'])
-        order = None
+        order_info = None
         if self.portfolio_strategy_short > 0:
-            self.portfolio_strategy_short = 0
-            order = order(self.code, -self.portfolio_strategy_short)
-        return order
+            # self.portfolio_strategy_short = 0
+            order_info = order(self.code, -self.portfolio_strategy_short)
+        return order_info
     #9
     # 止损函数
     # 输入：当前价格-float
@@ -765,14 +771,14 @@ class StockInfo:
         # 损失大于2N，卖出股票
         break_price = self.break_price_short
         # If the price has decreased by 2N, then clear all position
-        order = None
+        order_info = None
         if current_price < (break_price - 2*(self.N)[-1]):
             print "止损"
             print current_price
             # print break_price - 2*(g.N)[-1]
-            self.portfolio_strategy_short = 0  
-            order = order(self.code, - self.portfolio_strategy_short)
-        return order
+            # self.portfolio_strategy_short = 0  
+            order_info = order(self.code, - self.portfolio_strategy_short)
+        return order_infox
     #计算交易单位
     def calculate_unit(self,context):
         value = context.portfolio.portfolio_value
