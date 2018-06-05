@@ -163,7 +163,7 @@ def secuindex_sort(el1,el2):
 #获取有效的eps price条件股票
 def get_valid_stocks(context):
     cur_date = context.current_dt
-    g.all_trade_days = jqdata.get_trade_days(count = 300)
+    g.all_trade_days = jqdata.get_trade_days(end_date = cur_date,count = 300)
     start_date = g.all_trade_days[-g.industry_rangeDays]
     sortedList_level1 = get_ratioandsort(SW1,start_date,cur_date)
     sortedList_level2 = get_ratioandsort(SW2,start_date,cur_date)
@@ -223,6 +223,8 @@ def get_ratioandsort(secus,start_date,end_date):
     securitys = list()
     for x in secus:
         df = get_SW_index(x,start_date,end_date)
+        # if(df.empy()):
+        #     continue
         ratio = get_ratio(df)
         if math.isnan(ratio):
             ratio = 0
@@ -234,6 +236,8 @@ def get_ratioandsort(secus,start_date,end_date):
 def get_ratio(df):
     openPrice = df["ClosePrice"][0]
     closePrice = df["ClosePrice"][-1]
+    if(openPrice == None) or closePrice == None :
+        return float("nan")
     return (closePrice - openPrice)/openPrice
     
 #计算N天均线值（skip_paused True：使用交易日，False:使用自然日 ）
@@ -751,7 +755,7 @@ class StockInfo:
     # 输出：none
     def try_market_out(self,current_price, out_date):
         # Function for leaving the market
-        has_break_min = self.has_break_min(current_price ,self.system_high_short)
+        has_break_min = self.has_break_min(current_price ,self.system_low_short)
         # 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
         if not has_break_min:
             return
