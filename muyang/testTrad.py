@@ -44,6 +44,9 @@ def initialize(context):
     g.position_pool = {}
     init_turtle_data()
 
+    #计算N天内最从高价回落最多%M
+
+
 #获取有效股票并更新有效股票历史数据 price_info,eps_info
 def before_trading_start(context):
     g.stock_pool = get_valid_stocks(context)
@@ -141,6 +144,10 @@ def init_turtle_data():
     g.short_sys_key = "short_sys_key"  
     g.long_sys_key = "long_sys_key"
 
+    #计算N天内最从高价回落最多%M
+    g.rblh_d = 250
+    g.rblh_r = 0.35
+
 # 获取行业指数
 def get_SW_index(SW_index,start_date = '2017-01-31',end_date = '2018-01-31'):
     jydf = jy.run_query(query(jy.SecuMain).filter(jy.SecuMain.SecuCode == (SW_index)))
@@ -223,8 +230,8 @@ def get_ratioandsort(secus,start_date,end_date):
     securitys = list()
     for x in secus:
         df = get_SW_index(x,start_date,end_date)
-        # if(df.empy()):
-        #     continue
+        if(df.empty):
+            continue
         ratio = get_ratio(df)
         if math.isnan(ratio):
             ratio = 0
@@ -811,6 +818,11 @@ class StockInfo:
         log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
         self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
         return ""
+
+    #计算N天内最从高价回落最多%M
+    def get_ratio_between_last_hight(days = g.rblh_d,ratio = g.rblh_r):
+        # history
+        pass
 #股票管理类
 class StockManager():
     def __init__(self):
