@@ -818,11 +818,6 @@ class StockInfo:
         log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
         self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
         return ""
-
-    #计算N天内最从高价回落最多%M
-    def get_ratio_between_last_hight(days = g.rblh_d,ratio = g.rblh_r):
-        # history
-        pass
 #股票管理类
 class StockManager():
     def __init__(self):
