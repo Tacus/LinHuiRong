@@ -38,8 +38,8 @@ def initialize(context):
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
 
-    # g.debug_stocks = ["000729.XSHE"]
-    g.debug_stocks = None
+    g.debug_stocks = ["300323.XSHE"]
+    # g.debug_stocks = None
     g.stock_pool = []
     g.position_pool = {}
     init_turtle_data()
@@ -709,7 +709,7 @@ class StockInfo:
         value = context.portfolio.portfolio_value
         order_info = None
         if(self.portfolio_strategy_short == 0):
-            order_info = self.try_market_in(current_price,cash,self.system_high_short)
+            order_info = self.try_market_in(current_price,cash)
         else:
             order_info = self.try_stop_loss(current_price)
             order_info = self.try_market_add(current_price, g.ratio*cash, g.short_in_date)    
@@ -721,7 +721,7 @@ class StockInfo:
     # 输入：当前价格-float, 现金-float, 天数-int
     # 输出：none
     #暂时只考虑一个系统运行情况
-    def try_market_in(self,current_price, cash, in_date):
+    def try_market_in(self,current_price, cash):
        #短时系统操作是否可以入市
         has_break_max = self.has_break_max(current_price,self.system_high_short)
         if(not has_break_max):
@@ -731,7 +731,7 @@ class StockInfo:
             return
         order_info = None
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
-            print "开仓"
+            print "开仓！当前价：%s,最高价：%s"%(current_price,self.system_high_short)
             order_info = order(self.code, int(self.unit))
             # self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
@@ -749,12 +749,12 @@ class StockInfo:
         if num_of_shares < self.unit: 
             return
 
-        print "加仓"
         order_info = None
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
             order_info = order(self.code, int(self.unit))
             # self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
+            print "加仓！当前价：%s,上次突破买入价：%s，N:%s,unit:%s,position:%s"%(current_price,break_price,self.N[-1],self.unit,self.portfolio_strategy_short)
         return order_info
     #8
     # 离场函数
@@ -766,13 +766,13 @@ class StockInfo:
         # 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
         if not has_break_min:
             return
-        print "离场"
         print current_price
         # print min(price['close'])
         order_info = None
         if self.portfolio_strategy_short > 0:
             # self.portfolio_strategy_short = 0
             order_info = order(self.code, -self.portfolio_strategy_short)
+            print "离场！当前价：%s,最低价：%s，position:%s"%(current_price,self.system_low_short,self.portfolio_strategy_short)
         return order_info
     #9
     # 止损函数
@@ -784,8 +784,7 @@ class StockInfo:
         # If the price has decreased by 2N, then clear all position
         order_info = None
         if current_price < (break_price - 2*(self.N)[-1]):
-            print "止损"
-            print current_price
+            print "止损！当前价：%s,上次突破买入价：%s，N:%s,position:%s"%(current_price,break_price,self.N[-1],self.portfolio_strategy_short)
             # print break_price - 2*(g.N)[-1]
             # self.portfolio_strategy_short = 0  
             order_info = order(self.code, - self.portfolio_strategy_short)
@@ -818,11 +817,6 @@ class StockInfo:
         log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
         self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
         return ""
-
-    #计算N天内最从高价回落最多%M
-    def get_ratio_between_last_hight(days = g.rblh_d,ratio = g.rblh_r):
-        # history
-        pass
 #股票管理类
 class StockManager():
     def __init__(self):
