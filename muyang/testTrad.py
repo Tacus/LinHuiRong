@@ -61,6 +61,8 @@ def handle_data(context, data):
 
     for _,stock_info in g.position_pool.items():
         order = stock_info.start_process(context)
+
+        print("handle_data:",order != None and ("filled:%s,is_buy:%s"%(order.filled,order.is_buy)))
         if order != None and order.filled  > 0 and order.is_buy :
             stock_info.add_buy_count( order.filled)
         elif(order != None and order.filled > 0 and not order.is_buy):
@@ -199,10 +201,10 @@ def get_valid_stocks(context):
                 # eps_stock["eps_ratio"]))
     gr_index2 = get_growth_rate("000016.XSHG")
     gr_index8 = get_growth_rate("399333.XSHE")
-    if(gr_index8<gr_index2):
-        log.info("当前大盘强于小盘",gr_index2,gr_index8)
-    else:
-        log.info("当前小盘强于大盘",gr_index2,gr_index8)
+    # if(gr_index8<gr_index2):
+    #     log.info("当前大盘强于小盘",gr_index2,gr_index8)
+    # else:
+    #     log.info("当前小盘强于大盘",gr_index2,gr_index8)
     result = sorted(result,key = lambda d: d.market_cap,reverse = gr_index2>gr_index8)
     return result
 
@@ -646,9 +648,10 @@ class StockInfo:
 
     #每日更新当前数据信息
     def run_daily(self,context):
+        #唐安琪通道最高最低价的周期不同
         df = attribute_history(self.code,g.short_in_date,"1d",("high","low"))
         self.system_high_short = max(df.high)
-        self.system_low_short = min(df.low)
+        self.system_low_short = min(df.low[g.short_out_date:])
 
         df = attribute_history(self.code,g.long_in_date,"1d",("high","low"))
         self.system_high_long = max(df.high)
@@ -665,9 +668,17 @@ class StockInfo:
             for i in range(0, g.number_days*2):
                 if(np.isnan(price['high'][i])):
                     continue
-                h_l = price['high'][i]-price['low'][i]
-                h_c = price['high'][i]-price['close'][i]
-                c_l = price['close'][i]-price['low'][i]
+                high_price = price['high'][i]
+                low_price = price['low'][i]
+                index = i
+                if(i == 0):
+                    index = 0
+                else:
+                    index = i-1
+                last_close = price['close'][index]
+                h_l = high_price-low_price
+                h_c = high_price-last_close
+                c_l = last_close-low_price
                 # 计算 True Range 取计算第一天的前20天波动范围平均值
                 True_Range = max(h_l, h_c, c_l)
                 if(len(lst) < g.number_days):
@@ -679,10 +690,10 @@ class StockInfo:
                     current_N = (True_Range + (g.number_days-1)*(self.N)[-1])/g.number_days
                     (self.N).append(current_N)
         else:
-            price = attribute_history(self.code, 1, '1d',('high','low','close'))
+            price = attribute_history(self.code, 2, '1d',('high','low','close'))
             h_l = price['high'][0]-price['low'][0]
-            h_c = price['high'][0]-price['close'][0]
-            c_l = price['close'][0]-price['low'][0]
+            h_c = price['high'][0]-price['close'][1]
+            c_l = price['close'][1]-price['low'][0]
             # Calculate the True Range
             True_Range = max(h_l, h_c, c_l)
             # 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
@@ -712,8 +723,8 @@ class StockInfo:
             order_info = self.try_market_in(current_price,cash)
         else:
             order_info = self.try_stop_loss(current_price)
-            order_info = self.try_market_add(current_price, g.ratio*cash, g.short_in_date)    
-            order_info = self.try_market_out(current_price, g.short_out_date)
+            order_info = self.try_market_add(current_price, g.ratio*cash)    
+            order_info = self.try_market_out(current_price)
         return order_info
     #6
     # 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
@@ -731,16 +742,16 @@ class StockInfo:
             return
         order_info = None
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
-            print "开仓！当前价：%s,最高价：%s"%(current_price,self.system_high_short)
             order_info = order(self.code, int(self.unit))
             # self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
+            print "开仓！当前价：%s,最高价：%s,N:%s"%(current_price,self.system_high_short,self.N[-1])
         return order_info 
     #7
     # 加仓函数
     # 输入：当前价格-float, 现金-float, 天数-int
     # 输出：none
-    def try_market_add(self,current_price, cash, in_date):
+    def try_market_add(self,current_price, cash):
         break_price = self.break_price_short
         # 每上涨0.5N，加仓一个单元
         if current_price < break_price + 0.5*(self.N)[-1]: 
@@ -760,7 +771,7 @@ class StockInfo:
     # 离场函数
     # 输入：当前价格-float, 天数-int
     # 输出：none
-    def try_market_out(self,current_price, out_date):
+    def try_market_out(self,current_price):
         # Function for leaving the market
         has_break_min = self.has_break_min(current_price ,self.system_low_short)
         # 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
@@ -784,14 +795,14 @@ class StockInfo:
         # If the price has decreased by 2N, then clear all position
         order_info = None
         if current_price < (break_price - 2*(self.N)[-1]):
-            print "止损！当前价：%s,上次突破买入价：%s，N:%s,position:%s"%(current_price,break_price,self.N[-1],self.portfolio_strategy_short)
             # print break_price - 2*(g.N)[-1]
             # self.portfolio_strategy_short = 0  
             order_info = order(self.code, - self.portfolio_strategy_short)
+            print "止损！当前价：%s,上次突破买入价：%s，N:%s,position:%s"%(current_price,break_price,self.N[-1],self.portfolio_strategy_short)
         return order_info
     #计算交易单位
     def calculate_unit(self,context):
-        value = context.portfolio.portfolio_value
+        value = context.portfolio.total_value
          # 计算波动的价格
         dollar_volatility = g.dollars_per_share*(self.N)[-1]
         # 依本策略，计算买卖的单位
@@ -799,10 +810,13 @@ class StockInfo:
 
     #加仓数量
     def add_buy_count(self,count):
+        print("add_buy_count:",self.code,count,self.portfolio_strategy_short)
         self.portfolio_strategy_short += count
 
      #减仓数量
     def reduce_buy_count(self,count):
+        print("reduce_buy_count:",self.code,count,self.portfolio_strategy_short)
+
         self.portfolio_strategy_short -= count
 
      #获得仓位数量
