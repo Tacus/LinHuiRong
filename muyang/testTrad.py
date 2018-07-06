@@ -38,8 +38,8 @@ def initialize(context):
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
 
-    g.debug_stocks = ["300323.XSHE"]
-    # g.debug_stocks = None
+    # g.debug_stocks = ["300323.XSHE"]
+    g.debug_stocks = None
     g.stock_pool = []
     g.position_pool = {}
     init_turtle_data()
@@ -62,7 +62,6 @@ def handle_data(context, data):
     for _,stock_info in g.position_pool.items():
         order = stock_info.start_process(context)
 
-        print("handle_data:",order != None and ("filled:%s,is_buy:%s"%(order.filled,order.is_buy)))
         if order != None and order.filled  > 0 and order.is_buy :
             stock_info.add_buy_count( order.filled)
         elif(order != None and order.filled > 0 and not order.is_buy):
@@ -723,7 +722,11 @@ class StockInfo:
             order_info = self.try_market_in(current_price,cash)
         else:
             order_info = self.try_stop_loss(current_price)
-            order_info = self.try_market_add(current_price, g.ratio*cash)    
+            if(order_info != None):
+                return order_info
+            order_info = self.try_market_add(current_price, g.ratio*cash)
+            if(order_info != None):
+                return order_info 
             order_info = self.try_market_out(current_price)
         return order_info
     #6
@@ -810,13 +813,10 @@ class StockInfo:
 
     #加仓数量
     def add_buy_count(self,count):
-        print("add_buy_count:",self.code,count,self.portfolio_strategy_short)
         self.portfolio_strategy_short += count
 
      #减仓数量
     def reduce_buy_count(self,count):
-        print("reduce_buy_count:",self.code,count,self.portfolio_strategy_short)
-
         self.portfolio_strategy_short -= count
 
      #获得仓位数量
