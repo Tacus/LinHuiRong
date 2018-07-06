@@ -1,0 +1,1084 @@
+
+Total time: 3.6e-05 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: initialize at line 21
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    21                                           def initialize(context):
+    22                                               # g为全局变量
+    23         1            3      3.0      8.3      g.sw1_weight = 1
+    24         1            1      1.0      2.8      g.sw2_weight = 3
+    25         1            1      1.0      2.8      g.stock_weight = 6
+    26                                               
+    27                                               #个股均线周期
+    28         1            1      1.0      2.8      g.avg_period_1 = 50 
+    29         1            1      1.0      2.8      g.avg_period_2 = 150
+    30         1            1      1.0      2.8      g.avg_period_3 = 200
+    31                                               #个股涨幅周期
+    32         1            1      1.0      2.8      g.min_increase_period = 250
+    33         1            1      1.0      2.8      g.max_increase_period = 250
+    34                                               #个股上市最小自然日
+    35         1            1      1.0      2.8      g.stock_listDays = 300 #420
+    36                                               #指数涨幅计算自然日区间
+    37         1            1      1.0      2.8      g.industry_rangeDays = 120
+    38                                               #个股涨幅计算自然日区间
+    39         1            1      1.0      2.8      g.stock_rangeDays = 250 #250
+    40                                           
+    41         1            2      2.0      5.6      g.debug_stocks = ["300323.XSHE"]
+    42                                               # g.debug_stocks = None
+    43         1            1      1.0      2.8      g.stock_pool = []
+    44         1            1      1.0      2.8      g.position_pool = {}
+    45         1           19     19.0     52.8      init_turtle_data()
+
+Total time: 33045.7 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: before_trading_start at line 51
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    51                                           def before_trading_start(context):
+    52       315  33044094412 104901887.0    100.0      g.stock_pool = get_valid_stocks(context)
+    53       390          694      1.8      0.0      for single in g.stock_pool:
+    54        75      1082871  14438.3      0.0          single.run_daily(context)
+    55                                           
+    56       414          955      2.3      0.0      for _,stock_info in g.position_pool.items():
+    57        99       562249   5679.3      0.0          stock_info.run_daily(context)
+
+Total time: 47.7475 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: handle_data at line 60
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    60                                           def handle_data(context, data):
+    61                                           
+    62     99250       255119      2.6      0.5      for _,stock_info in g.position_pool.items():
+    63     23650     12666883    535.6     26.5          order = stock_info.start_process(context)
+    64                                           
+    65     23650     26196369   1107.7     54.9          print("handle_data:",order != None and ("filled:%s,is_buy:%s"%(order.filled,order.is_buy)))
+    66     23650        37780      1.6      0.1          if order != None and order.filled  > 0 and order.is_buy :
+    67         8         2459    307.4      0.0              stock_info.add_buy_count( order.filled)
+    68     23642        20714      0.9      0.0          elif(order != None and order.filled > 0 and not order.is_buy):
+    69         6         1922    320.3      0.0              stock_info.reduce_buy_count( order.filled)
+    70         6           32      5.3      0.0              count = stock_info.get_buy_count()
+    71         6            6      1.0      0.0              if(count <= 0):
+    72         6           14      2.3      0.0                  del g.position_pool[stock_info.code]
+    73                                           
+    74     92697       140219      1.5      0.3      for single in g.stock_pool:
+    75     17097      8404007    491.5     17.6          order = single.start_process(context)
+    76     17097        21851      1.3      0.0          if order != None and order.filled  > 0 and order.is_buy :
+    77         6          100     16.7      0.0              single.set_buy_count( order.filled)
+    78         6           25      4.2      0.0              g.stock_pool.remove(single)
+    79         6           12      2.0      0.0              g.position_pool[single.code] = single
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: init_stock_security_map at line 85
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    85                                           def init_stock_security_map(sw):
+    86                                               df = pd.DataFrame()
+    87                                               allstocks_df = get_all_securities()
+    88                                               allstocks_df["display_code"] = allstocks_df.index.tolist()
+    89                                               for code in sw:
+    90                                                   stocks_list = get_industry_stocks(code)
+    91                                                   # stocks_list[]
+    92                                                   _df = pd.DataFrame(stocks_list,columns =['code'])
+    93                                                   _df['industrycode'] = code
+    94                                                   stock_info = allstocks_df[allstocks_df["display_code"].isin ( stocks_list)]
+    95                                                  
+    96                                                   _df["display_name"] = stock_info["display_name"].tolist()
+    97                                                   # print(_df)
+    98                                                   df = pd.concat([df,_df],axis =0)
+    99                                                   
+   100                                               df.index = df["display_name"]
+   101                                               # print(df
+   102                                               return df
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: init_turtle_data at line 107
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   107                                           def init_turtle_data():
+   108                                               # 系统1入市的trailing date
+   109                                               g.short_in_date = 20
+   110                                               # 系统2入市的trailing date
+   111                                               g.long_in_date = 55
+   112                                               # 系统1 exiting market trailing date
+   113                                               g.short_out_date = 10
+   114                                               # 系统2 exiting market trailing date
+   115                                               g.long_out_date = 20
+   116                                               # g.dollars_per_share是标的股票每波动一个最小单位，1手股票的总价格变化量。
+   117                                               # 在国内最小变化量是0.01元，所以就是0.01×100=1
+   118                                               g.dollars_per_share = 1
+   119                                               # 可承受的最大损失率
+   120                                               g.loss = 0.1
+   121                                               # 若超过最大损失率，则调整率为：
+   122                                               g.adjust = 0.8
+   123                                               # 计算N值的天数
+   124                                               g.number_days = 20
+   125                                               # 最大允许单元
+   126                                               g.unit_limit = 4
+   127                                               # 系统1所配金额占总金额比例
+   128                                               g.ratio = 0.8
+   129                                           
+   130                                               g.unit = 1000
+   131                                               # A list storing info of N
+   132                                               g.N = []
+   133                                               # Record the number of days for this trading system
+   134                                               g.days = 0
+   135                                               # 系统1的突破价格
+   136                                               g.break_price1 = 0
+   137                                               # 系统2的突破价格
+   138                                               g.break_price2 = 0
+   139                                               # 系统1建的仓数
+   140                                               g.sys1 = 0
+   141                                               # 系统2建的仓数
+   142                                               g.sys2 = 0
+   143                                               # 系统1执行且系统2不执行
+   144                                               g.system1 = True  
+   145                                           
+   146                                               g.short_sys_key = "short_sys_key"  
+   147                                               g.long_sys_key = "long_sys_key"
+   148                                           
+   149                                               #计算N天内最从高价回落最多%M
+   150                                               g.rblh_d = 250
+   151                                               g.rblh_r = 0.35
+
+Total time: 10828.1 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_SW_index at line 154
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   154                                           def get_SW_index(SW_index,start_date = '2017-01-31',end_date = '2018-01-31'):
+   155     41265   8397717242 203507.0     77.6      jydf = jy.run_query(query(jy.SecuMain).filter(jy.SecuMain.SecuCode == (SW_index)))
+   156     41265     12705144    307.9      0.1      result=jydf['InnerCode'][0]
+   157                                               
+   158     41265     13885025    336.5      0.1      df = jy.run_query(query(jy.QT_SYWGIndexQuote).filter(jy.QT_SYWGIndexQuote.InnerCode == result,\
+   159     41265      3774130     91.5      0.0                                                     jy.QT_SYWGIndexQuote.TradingDay>=start_date,\
+   160     41265   2342086602  56757.2     21.6                                                           jy.QT_SYWGIndexQuote.TradingDay<=end_date
+   161                                                                                                  ))
+   162     41265     17227455    417.5      0.2      df.index = df['TradingDay']
+   163     41265     40674028    985.7      0.4      return df[index_list]
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: secuindex_sort at line 165
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   165                                           def secuindex_sort(el1,el2):
+   166                                               if(el1["value"] >  el2["value"]):
+   167                                                   return 1
+   168                                               elif el1["value"] ==  el2["value"]:
+   169                                                   return 0
+   170                                               else:
+   171                                                   return -1
+
+Total time: 33043.7 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_valid_stocks at line 173
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   173                                           def get_valid_stocks(context):
+   174       315        19631     62.3      0.0      cur_date = context.current_dt
+   175       315        13374     42.5      0.0      g.all_trade_days = jqdata.get_trade_days(end_date = cur_date,count = 300)
+   176       315          943      3.0      0.0      start_date = g.all_trade_days[-g.industry_rangeDays]
+   177       315   2329693371 7395852.0      7.1      sortedList_level1 = get_ratioandsort(SW1,start_date,cur_date)
+   178       315   8516560085 27036698.7     25.8      sortedList_level2 = get_ratioandsort(SW2,start_date,cur_date)
+   179       315  22025842755 69923310.3     66.7      mighty_price_list = get_mighty_price_stocks(context,sortedList_level1,sortedList_level2)
+   180       315    169165296 537032.7      0.5      mighty_eps_list = get_mighty_eps_stocks(context,g.debug_stocks)
+   181       315          509      1.6      0.0      result = []
+   182     60539        94703      1.6      0.0      for stock,price_stock in mighty_price_list.items():
+   183    114600       138738      1.2      0.0          for eps_stock in mighty_eps_list :
+   184     54376        69002      1.3      0.0              if eps_stock["code"] == stock:
+   185       174          204      1.2      0.0                  year_eps_ratio2 = "None"
+   186       174          499      2.9      0.0                  if eps_stock.has_key("year_eps_ratio2"):
+   187                                                              year_eps_ratio2 = eps_stock["year_eps_ratio2"]
+   188       174          205      1.2      0.0                  year_eps_ratio3 = "None"
+   189       174          246      1.4      0.0                  if eps_stock.has_key("year_eps_ratio3"):
+   190                                                              year_eps_ratio3 = eps_stock["year_eps_ratio3"]
+   191                                                       #     log.info("%s的最近两个季度eps增长率：%s:%s%%,%s:%s%%，最近年度eps增长率：%s%%,%s%%,%s%%"%(x["code"],
+   192                                                       #   x["eps_date2"],x["eps_ratio2"],x["eps_date"], x["eps_ratio"],year_eps_ratio3,year_eps_ratio2,x["year_eps_ratio"]))
+   193                                                           # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,\最近年度eps增长率：%s%%,%s%%,%s%%"%(stock,
+   194                                                           # price_stock["security_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
+   195                                                           # eps_stock["eps_ratio"],year_eps_ratio3,year_eps_ratio2,eps_stock["year_eps_ratio"]))
+   196       174        14040     80.7      0.0                  stInfo = get_stock_info(price_stock,eps_stock)
+   197       174          759      4.4      0.0                  if(stInfo != None):
+   198        75          174      2.3      0.0                      result.append(stInfo)
+   199                                                           # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%"%(stock,
+   200                                                           # price_stock["security_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
+   201                                                           # eps_stock["eps_ratio"]))
+   202       315      1148735   3646.8      0.0      gr_index2 = get_growth_rate("000016.XSHG")
+   203       315       964628   3062.3      0.0      gr_index8 = get_growth_rate("399333.XSHE")
+   204                                               # if(gr_index8gr_index8)
+   209       315          386      1.2      0.0      return result
+
+Total time: 0.011905 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_stock_info at line 211
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   211                                           def get_stock_info(price_info,eps_info):
+   212       174          188      1.1      1.6      code = eps_info["code"]
+   213       174          195      1.1      1.6      exsit = False
+   214       174          792      4.6      6.7      for code_,stock_info in g.position_pool.items():
+   215        99           94      0.9      0.8          if(code == code_):
+   216        99         4238     42.8     35.6              stock_info.update_info(price_info,eps_info)
+   217        99           96      1.0      0.8              exsit = True
+   218        99          137      1.4      1.2              break
+   219       174          141      0.8      1.2      if not exsit:
+   220        75         6024     80.3     50.6          return StockInfo(price_info,eps_info)
+
+Total time: 3.53569 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: common_get_weight at line 222
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   222                                           def common_get_weight(list):
+   223       945         1326      1.4      0.0      size = len(list)
+   224    982028       605337      0.6     17.1      for index in range(len(list)):
+   225    981083       620709      0.6     17.6          x = list[index]    
+   226                                                   # value =  (index+1)*(99/(1-size))+100-(99/(1-size))
+   227    981083       786584      0.8     22.2          value = index*(99.0/(1-size))+100
+   228    981083      1521736      1.6     43.0          x["weight"] = round(value,1)
+
+Total time: 10845.9 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_ratioandsort at line 231
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   231                                           def get_ratioandsort(secus,start_date,end_date):
+   232       630         1140      1.8      0.0      securitys = list()
+   233     41895        68880      1.6      0.0      for x in secus:
+   234     41265  10830153742 262453.7     99.9          df = get_SW_index(x,start_date,end_date)
+   235     41265       940454     22.8      0.0          if(df.empty):
+   236        69           82      1.2      0.0              continue
+   237     41196     14159321    343.7      0.1          ratio = get_ratio(df)
+   238     41196       164555      4.0      0.0          if math.isnan(ratio):
+   239       282          278      1.0      0.0              ratio = 0
+   240     41196        97702      2.4      0.0          securitys.append({"secu":x,"value":ratio})
+   241       630        48327     76.7      0.0      result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
+   242       630       267709    424.9      0.0      common_get_weight(result)
+   243       630          560      0.9      0.0      return result
+
+Total time: 13.7556 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_ratio at line 245
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   245                                           def get_ratio(df):
+   246     41196     11129462    270.2     80.9      openPrice = df["ClosePrice"][0]
+   247     41196      2396008     58.2     17.4      closePrice = df["ClosePrice"][-1]
+   248     41196       115504      2.8      0.8      if(openPrice == None) or closePrice == None :
+   249        15           58      3.9      0.0          return float("nan")
+   250     41181       114603      2.8      0.8      return (closePrice - openPrice)/openPrice
+
+Total time: 795.739 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_day_ratio at line 253
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   253                                           def get_day_ratio(securitylist,days):
+   254       945    614997750 650791.3     77.3      df = history(days, "1d", "close", securitylist,skip_paused = True)
+   255       945    180484580 190989.0     22.7      series_sum = df.apply(sum)
+   256                                               # print(df)
+   257       945       255839    270.7      0.0      avg = series_sum/days
+   258       945         1068      1.1      0.0      return avg
+
+Total time: 2856.11 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_day_extreme at line 260
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   260                                           def get_day_extreme(securitylist,days,method):
+   261       630   2746564223 4359625.8     96.2      df = history(days, "1d", "close", securitylist)
+   262       630    109544792 173880.6      3.8      result = df.apply(method)
+   263                                               # avg = series_sum/days
+   264       630         1406      2.2      0.0      return result
+
+Total time: 21957.1 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_mighty_price_stocks at line 267
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   267                                           def get_mighty_price_stocks(context,sw1dict,sw2dict):
+   268                                               # start_date = context.current_dt + datetime.timedelta(days = -g.stock_listDays)
+   269                                               # start_date = start_date.date()
+   270       315         2395      7.6      0.0      start_date = g.all_trade_days[-g.stock_listDays]
+   271       315     23602768  74929.4      0.1      secuData = get_all_securities(types=['stock'])
+   272       315       958810   3043.8      0.0      secuData = secuData[secuData["start_date"]<=start_date]
+   273       315       142101    451.1      0.0      secuData = secuData.index.tolist()
+   274                                               
+   275       315    262055694 831922.8      1.2      avg_1 = get_day_ratio(secuData,g.avg_period_1)
+   276                                               
+   277       315    265899039 844123.9      1.2      avg_2 = get_day_ratio(secuData,g.avg_period_2)
+   278                                               
+   279       315    267825190 850238.7      1.2      avg_3 = get_day_ratio(secuData,g.avg_period_3)
+   280                                               
+   281       315   1429816625 4539100.4      6.5      min_closes = get_day_extreme(secuData,g.min_increase_period,min)
+   282       315   1426322391 4528007.6      6.5      max_closes = get_day_extreme(secuData,g.max_increase_period,max)
+   283                                               
+   284                                               # resultDf = ((retDictclose - retDictopen)/retDictopen)
+   285                                               # print( (retDictclose["close"]- retDictopen["open"])/retDictopen["open"])
+   286                                               
+   287       315   1546291768 4908862.8      7.0      result = get_price(secuData, None, context.current_dt, str(g.stock_rangeDays)+"d", ["open","close"], False, "pre", 1)
+   288                                               # result.fillnan(0)
+   289       315         1701      5.4      0.0      securitys = list()
+   290       315       587834   1866.1      0.0      resultRatio = (result["close"] - result["open"])/result["open"]
+   291                                               # resultDelta = result["close"] - result["open"]
+   292                                               # print(resultRatio)
+   293    940202      2262175      2.4      0.0      for x in secuData:
+   294    939887    142902180    152.0      0.7          ratio = resultRatio[x][0]
+   295    939887      2711656      2.9      0.0          if math.isnan(ratio):
+   296                                                       # print(x,"null")
+   297     21714        46179      2.1      0.0              ratio = 0
+   298    939887      2509919      2.7      0.0          securitys.append({"value":ratio,"secu":x})
+   299                                               
+   300       315      1081221   3432.4      0.0      result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
+   301       315      5487118  17419.4      0.0      common_get_weight(result)
+   302                                               # print("result",result)
+   303    940202      2476888      2.6      0.0      for x in result:
+   304    939887  10943716328  11643.7     49.8          plateWeight = get_plante_weight(x["secu"],sw1dict,sw2dict)
+   305    939887      2387781      2.5      0.0          deltaValue = x["weight"]
+   306    939887      3281880      3.5      0.0          ret = math.isnan(deltaValue)
+   307    939887      2027613      2.2      0.0          weight = 0
+   308    939887      1952109      2.1      0.0          if(not ret):
+   309    939887      2937589      3.1      0.0               weight = deltaValue*g.stock_weight/10+plateWeight
+   310                                                   # print(x["secu"],ratio,maxRatio,minRatio,plateWeight,weight)
+   311    939887      7312662      7.8      0.0          x["value"] = round(weight,1)
+   312       315      1016773   3227.9      0.0      result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
+   313       315         2581      8.2      0.0      num =int( math.floor(len(result)*0.2))
+   314                                               # (result)
+   315                                               # result = result[:num]
+   316                                               # print("num:",num)
+   317       315          675      2.1      0.0      index = 1
+   318       315          711      2.3      0.0      fileter_securitys = {}
+   319       315          658      2.1      0.0      stocks = []
+   320       315       523726   1662.6      0.0      data = get_current_data()
+   321    940202      2593564      2.8      0.0      for x in result:
+   322                                                   # security_name = sw1mapdf.loc[x["secu"]]
+   323    939887      2353887      2.5      0.0          security = x["secu"]
+   324    939887   5171699422   5502.5     23.6          security_name = sw1mapdf[sw1mapdf["code"] == security]
+   325    939887    312742152    332.7      1.4          close = data[security].last_price
+   326    939887     33877124     36.0      0.2          security_avg1 = avg_1[security]
+   327    939887     17845004     19.0      0.1          security_avg2 = avg_2[security]
+   328    939887     15526225     16.5      0.1          security_avg3 = avg_3[security]
+   329    939887     14958604     15.9      0.1          min_close = min_closes[security]
+   330    939887     14733194     15.7      0.1          max_close = max_closes[security]
+   331                                                   # log.info("%s当前价：%s,avg1为：%s,avg2为：%s,avg3为：%s,\
+   332                                                   #     min_close为：%s,max_close为：%s,"%(
+   333                                                   #     security,close,security_avg1,security_avg2 ,
+   334                                                   #     security_avg3,min_close,max_close) )
+   335                                                   
+   336    939887      2484771      2.6      0.0          stock_score = x["weight"]
+   337    939887      2575912      2.7      0.0          if(security_name is not None and close>security_avg1 
+   338    357374       787449      2.2      0.0              and security_avg1>security_avg2 
+   339    146682       307259      2.1      0.0              and security_avg2>security_avg3
+   340    104126       298713      2.9      0.0              and close>min_close*1.1
+   341     94506       209245      2.2      0.0              and close>max_close*0.7
+   342     94269       220162      2.3      0.0              and stock_score >87):
+   343     60297      9558153    158.5      0.0              if(security_name["display_name"].size == 0):
+   344                                                           #  log.info("name 为空",security,security_name,sw1mapdf)
+   345        73          199      2.7      0.0                   continue
+   346     60224      5258750     87.3      0.0              security_name = security_name["display_name"][0]
+   347                                                       # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s"%(x["secu"],security_name,index,x["value"],x["weight"] ) )
+   348     60224       169302      2.8      0.0              x["index"] = index
+   349     60224       132390      2.2      0.0              x["security_name"] = security_name
+   350     60224       137362      2.3      0.0              index += 1
+   351     60224       159679      2.7      0.0              fileter_securitys[x["secu"]] = x
+   352     60224       184303      3.1      0.0              stocks.append(x["secu"])
+   353     60224       142149      2.4      0.0              if(index > num):
+   354                                                           break
+   355                                                   
+   356                                                   # else:
+   357                                                   #     security_name = "已退市"
+   358                                                   # log.info("%s（%s）的排名为：%s,分数为：%s"%(x["secu"],security_name,index,x["value"] ) )
+   359                                                   # index +=1
+   360                                               # for i in arrange
+   361                                               # (result)
+   362       315          649      2.1      0.0      return fileter_securitys
+
+Total time: 10933 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_plante_weight at line 365
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   365                                           def get_plante_weight(security,sw1list,sw2list):
+   366    939887       737888      0.8      0.0      weightValue = 0
+   367    939887   5447079349   5795.5     49.8      weightValue += get_weight(security,sw1mapdf,sw1list,g.sw1_weight,1)
+   368    939887   5484356227   5835.1     50.2      weightValue += get_weight(security,sw2mapdf,sw2list,g.sw2_weight,2)
+   369    939887       795922      0.8      0.0      return weightValue
+
+Total time: 10823.4 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_weight at line 371
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   371                                           def get_weight(security,df,swlist,weightRatio,level):
+   372   1879774  10373370161   5518.4     95.8      df = df[df['code'] == security]
+   373   1879774    351800533    187.2      3.3      industrycode = list(df["industrycode"])
+   374   1879774      2991081      1.6      0.0      if(len( industrycode)>0):
+   375   1821493      1677627      0.9      0.0          industrycode = industrycode[0]
+   376                                               else:
+   377     58281        37629      0.6      0.0          return 0
+   378                                               # (industrycode,type(industrycode))
+   379  58887610     42537969      0.7      0.4      for x in swlist:
+   380  58887610     47429819      0.8      0.4          if(industrycode == x["secu"]):
+   381   1821493      3512490      1.9      0.0              return x["weight"]*weightRatio/10
+   382                                               # log.info(security,u"不在%s级申万行业中"%(level))     
+   383                                               return 0
+
+Total time: 0.00697 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_last_reason_date at line 386
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   386                                           def get_last_reason_date(dt,month_count = 0,year_count = 0):
+   387       945         1052      1.1     15.1      date = dt.date()
+   388       945          970      1.0     13.9      month = date.month
+   389       945          725      0.8     10.4      year = date.year
+   390       945          772      0.8     11.1      month = month -3*month_count
+   391       945          622      0.7      8.9      if(month <=0):
+   392       234          145      0.6      2.1          month = 12
+   393       234          177      0.8      2.5          year = year -1
+   394       945          643      0.7      9.2      year = year -year_count
+   395       945         1864      2.0     26.7      return str(year)+"q"+str(month/3)
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_last_year_date at line 397
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   397                                           def get_last_year_date(dt,year_count = 0):
+   398                                               date = dt.date()
+   399                                               year = date.year
+   400                                               year = year - year_count
+   401                                               return str(year)
+
+Total time: 0.263858 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_adjust_eps at line 404
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   404                                           def get_adjust_eps(df):
+   405       945       138809    146.9     52.6      eps = df["eps"][0]
+   406       945       124056    131.3     47.0      eps = eps*df["adjusted_profit_to_profit"][0]/100
+   407       945          993      1.1      0.4      return eps
+
+Total time: 169.111 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_mighty_eps_stocks at line 411
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   411                                           def get_mighty_eps_stocks(context,securitys=None):
+   412       315          555      1.8      0.0      if(securitys):
+   413       315       267647    849.7      0.2          qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit).filter(valuation.code.in_(securitys))
+   414                                               else:
+   415                                                   qobj = query(valuation.code,valuation.circulating_market_cap,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit)
+   416       315        55944    177.6      0.0      current_dt = context.current_dt
+   417       315     36190655 114891.0     21.4      df = get_fundamentals(qobj,date=current_dt)
+   418                                               # print(df)
+   419       315          812      2.6      0.0      result = []
+   420       630         5756      9.1      0.0      for index in df.index:
+   421       315       165133    524.2      0.1          cldata = df.loc[index]
+   422       315        16859     53.5      0.0          dt_str = cldata.statDate
+   423       315        40570    128.8      0.0          dt = datetime.datetime.strptime(dt_str, '%Y-%m-%d')
+   424       315        11339     36.0      0.0          code = cldata.code
+   425       315        15114     48.0      0.0          eps = cldata.eps*cldata.adjusted_profit_to_profit/100
+   426                                                   # print(str.format("eps:%s,rps:%s,eps:%s"%(cldata.eps,cldata.adjusted_profit_to_profit,eps)))
+   427       315         6964     22.1      0.0          market_cap = cldata.circulating_market_cap
+   428                                                   
+   429       315         7370     23.4      0.0          last_dt = get_last_reason_date(dt,0,1)
+   430       315         4589     14.6      0.0          last_dt2 = get_last_reason_date(dt,1)
+   431       315         4202     13.3      0.0          last_dt3 = get_last_reason_date(dt,1,1)
+   432                                                   
+   433       315       217018    688.9      0.1          single_query = query(valuation.code,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit).filter(valuation.code == code)
+   434       315     40662256 129086.5     24.0          single_df = get_fundamentals(single_query,statDate=last_dt)
+   435       315     53039174 168378.3     31.4          single_df2 = get_fundamentals(single_query,statDate=last_dt2)
+   436       315     38018148 120692.5     22.5          single_df3 = get_fundamentals(single_query,statDate=last_dt3)
+   437                                                   # print(dt,last_dt,last_dt2,last_dt3)
+   438       315        18329     58.2      0.0          if(single_df.empty or single_df2.empty or single_df3.empty):
+   439                                                       # print("未找到财报数据",code,dt,last_dt,last_dt2,last_dt3)
+   440                                                       continue
+   441       315        82362    261.5      0.0          dt_str2 = single_df2["statDate"][0]
+   442       315        99494    315.9      0.1          last_eps = get_adjust_eps(single_df)
+   443       315        83484    265.0      0.0          last_eps2 = get_adjust_eps(single_df2)
+   444       315        89229    283.3      0.1          last_eps3 = get_adjust_eps(single_df3)
+   445                                                   # print(str.format("eps:%s,eps2:%s,eps3:%s"%(last_eps,last_eps2,last_eps3)))
+   446       315          749      2.4      0.0          ratio = (eps - last_eps)/last_eps
+   447       315          515      1.6      0.0          ratio2 = (last_eps2 - last_eps3)/last_eps3
+   448                                                   # x["eps_ratio"] = math.floor(ratio*100)
+   449                                                   # x["eps_ratio2"] = math.floor(ratio2*100)
+   450       315          690      2.2      0.0          if(ratio<0.2 or ratio2 <0.2):
+   451        32           36      1.1      0.0              continue
+   452       283          625      2.2      0.0          result.append({"code":code,
+   453       283         2031      7.2      0.0          "eps_ratio":round(ratio*100,1),
+   454       283          756      2.7      0.0          "eps_ratio2":round(ratio2*100,1),
+   455       283          458      1.6      0.0          "eps_date":dt_str,
+   456       283          408      1.4      0.0          "eps_date2":dt_str2,
+   457       283          856      3.0      0.0          "market_cap":market_cap
+   458                                                   })
+   459                                                   # result.append({"code":code,"eps_ratio":round(ratio*100,1),"eps_ratio2":round(ratio2*100,1)})
+   460                                                   # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,eps增长率：%s%%"%(x["secu"],x["security_name"],x["index"],x["value"],math.floor(x["weight"]) ,math.floor(ratio*100)) )
+   461                                                   # last_year_dt = get_last_year_date(current_dt,year_count=1)
+   462                                                   # single_df = get_fundamentals(single_query,statDate=last_year_dt)
+   463                                                   # if(single_df.empty):
+   464                                                   #     last_year_eps = get_total_eps_stocks(last_year_dt,code)
+   465                                                   #     if(not last_year_eps):
+   466                                                   #         continue
+   467                                                   # else:
+   468                                                   #     last_year_eps = single_df["eps"][0]
+   469                                                   # last_year_dt2 = get_last_year_date(current_dt,year_count=2)
+   470                                                   # single_df2 = get_fundamentals(single_query,statDate=last_year_dt2)
+   471                                                   # if(single_df2.empty):
+   472                                                   #     continue
+   473                                                   
+   474                                                   # last_year_eps2 = single_df2["eps"][0]
+   475                                                   # year_ratio = (last_year_eps - last_year_eps2)/last_year_eps2
+   476                                                   # if(year_ratio<0.2):
+   477                                                   #     continue
+   478                                                   # last_year_dt3 = get_last_year_date(current_dt,year_count=3)
+   479                                                   # single_df3 = get_fundamentals(single_query,statDate=last_year_dt3)
+   480                                                   # year_ratio2 = None
+   481                                                   
+   482                                                   # if(not single_df3.empty):
+   483                                                   #     last_year_eps3 = single_df3["eps"][0]
+   484                                                   #     year_ratio2 = (last_year_eps2 - last_year_eps3)/last_year_eps3
+   485                                                   # else:
+   486                                                   #     result.append({"code":code,
+   487                                                   #     "eps_ratio":round(ratio*100,1),
+   488                                                   #     "eps_date":dt_str,
+   489                                                   #     "eps_date2":dt_str2,
+   490                                                   #     "eps_ratio2":round(ratio2*100,1),
+   491                                                   #     "year_eps_date":last_year_dt,
+   492                                                   #     "year_eps_ratio":round(year_ratio*100,1)})
+   493                                                   #     continue
+   494                                                   # if(year_ratio2<0.2):
+   495                                                   #     continue
+   496                                                   # last_year_dt4 = get_last_year_date(dt,year_count=4)
+   497                                                   # single_df4 = get_fundamentals(single_query,statDate=last_year_dt4)
+   498                                                   # year_ratio3 = None
+   499                                                   # if(not single_df4.empty):
+   500                                                   #     last_year_eps4 = single_df4["eps"][0]
+   501                                                   #     year_ratio3 = (last_year_eps3 - last_year_eps4)/last_year_eps4
+   502                                                   # else:
+   503                                                   #     result.append({"code":code,
+   504                                                   #     "eps_ratio":round(ratio*100,1),
+   505                                                   #     "eps_date":dt_str,
+   506                                                   #     "eps_date2":dt_str2,
+   507                                                   #     "eps_ratio2":round(ratio2*100,1),
+   508                                                   #     "year_eps_date":last_year_dt,
+   509                                                   #     "year_eps_date2":last_year_dt2,
+   510                                                   #     "year_eps_ratio":round(year_ratio*100,1),
+   511                                                   #     "year_eps_ratio2":round(year_ratio2*100,1)
+   512                                                   #     }) 
+   513                                                   #     continue
+   514                                                   # if(year_ratio3 <0.2):
+   515                                                   #     continue
+   516                                                   # else:
+   517                                                   #     result.append({"code":code,
+   518                                                   #     "eps_ratio":round(ratio*100,1),
+   519                                                   #     "eps_ratio2":round(ratio2*100,1),
+   520                                                   #     "eps_date":dt_str,
+   521                                                   #     "eps_date2":dt_str2,
+   522                                                   #     "year_eps_date":last_year_dt,
+   523                                                   #     "year_eps_date2":last_year_dt2,
+   524                                                   #     "year_eps_date3":last_year_dt3,
+   525                                                   #     "year_eps_ratio":round(year_ratio*100,1),
+   526                                                   #     "year_eps_ratio2":round(year_ratio2*100,1),
+   527                                                   #     "year_eps_ratio3":round(year_ratio3*100,1)
+   528                                                   #     })
+   529                                                   # print(single_df)
+   530                                               # # result = sorted(result,key  = lambda d: d["index"])
+   531                                               # for x in result:
+   532                                               #     # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,eps1增长率：%s%%,eps2增长率：%s%%"%(x["secu"], x["security_name"],x["index"],x["value"],math.floor(x["weight"]) ,x["eps_ratio"],x["eps_ratio2"]) )
+   533                                               #     year_eps_ratio2 = "None"
+   534                                               #     if x.has_key("year_eps_ratio2"):
+   535                                               #       year_eps_ratio2 = x["year_eps_ratio2"]
+   536                                               #       year_eps_ratio2 = x["year_eps_ratio2"]
+   537                                               #     year_eps_ratio3 = "None"
+   538                                               #     if x.has_key("year_eps_ratio3"):
+   539                                               #       year_eps_ratio3 = x["year_eps_ratio3"]
+   540                                               # #     log.info("%s的最近两个季度eps增长率：%s:%s%%,%s:%s%%，最近年度eps增长率：%s%%,%s%%,%s%%"%(x["code"],
+   541                                               # #   x["eps_date2"],x["eps_ratio2"],x["eps_date"], x["eps_ratio"],year_eps_ratio3,year_eps_ratio2,x["year_eps_ratio"]))
+   542                                               #     log.info("%s的最近两个季度eps增长率：%s%%,%s%%，最近年度eps增长率：%s%%,%s%%"%(x["code"],
+   543                                               #   x["eps_ratio2"], x["eps_ratio"],year_eps_ratio3,year_eps_ratio2))
+   544       315          402      1.3      0.0      return result
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_total_eps_stocks at line 549
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   549                                           def get_total_eps_stocks(dt_str,code):
+   550                                               single_query = query(valuation.code,income.basic_eps,indicator.eps,indicator.statDate,indicator.adjusted_profit_to_profit).filter(valuation.code == code)
+   551                                               reason = dt_str+"q1"
+   552                                               eps = 0
+   553                                               simple_df = get_fundamentals(single_query,statDate=reason)
+   554                                               if(simple_df.empty):
+   555                                                   return None
+   556                                               eps = eps+get_adjust_eps(simple_df)
+   557                                               reason = dt_str+"q2"
+   558                                               simple_df = get_fundamentals(single_query,statDate=reason)
+   559                                               if(simple_df.empty):
+   560                                                   return None
+   561                                               eps = eps+get_adjust_eps(simple_df)
+   562                                               reason = dt_str+"q3"
+   563                                               simple_df = get_fundamentals(single_query,statDate=reason)
+   564                                               if(simple_df.empty):
+   565                                                   return None
+   566                                               eps = eps+get_adjust_eps(simple_df)
+   567                                               return eps
+
+Total time: 2.10667 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_growth_rate at line 571
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   571                                           def get_growth_rate(security, n=20):
+   572       630       967536   1535.8     45.9      lc = get_close_price(security, n)
+   573                                               #c = data[security].close
+   574       630      1131093   1795.4     53.7      c = get_close_price(security, 1, '1m')
+   575                                               
+   576       630         6844     10.9      0.3      if not isnan(lc) and not isnan(c) and lc != 0:
+   577       630         1193      1.9      0.1          return (c - lc) / lc
+   578                                               else:
+   579                                                   log.error("数据非法, security: %s, %d日收盘价: %f, 当前价: %f" %(security, n, lc, c))
+   580                                                   return 0
+
+Total time: 2.09083 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_close_price at line 584
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   584                                           def get_close_price(security, n, unit='1d'):
+   585      1260      2090832   1659.4    100.0      return attribute_history(security, n, unit, ('close'), True)['close'][0]
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: __init__ at line 593
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   593                                               def __init__(self):
+   594                                                   pass
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: filter_stocks at line 595
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   595                                               def filter_stocks(self):
+   596                                                   pass
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: market_in at line 597
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   597                                               def market_in(self):
+   598                                                   pass
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: market_out at line 599
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   599                                               def market_out(self):
+   600                                                   pass
+
+Total time: 0.005371 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: __init__ at line 604
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   604                                               def __init__(self, price_info,eps_info):
+   605        75         2303     30.7     42.9          self._init_data()
+   606        75         3068     40.9     57.1          self.update_info(price_info,eps_info)
+
+Total time: 0.000875 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: update_price_info at line 608
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   608                                               def update_price_info(self,price_info):
+   609       174          292      1.7     33.4          self.value = price_info["value"]
+   610       174          192      1.1     21.9          self.security_name = price_info["security_name"]
+   611       174          170      1.0     19.4          self.index = price_info["index"]
+   612       174          221      1.3     25.3          self.weight = price_info["weight"]
+
+Total time: 0.001749 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: update_eps_info at line 615
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   615                                               def update_eps_info(self,eps_info):
+   616       174          249      1.4     14.2          self.code = eps_info["code"]
+   617       174          199      1.1     11.4          self.eps_ratio2 = eps_info["eps_ratio2"]
+   618       174          181      1.0     10.3          self.eps_ratio = eps_info["eps_ratio"]       
+   619       174          198      1.1     11.3          self.market_cap = eps_info["market_cap"]
+   620       174          174      1.0      9.9          if eps_info.has_key("year_eps_ratio2"):
+   621                                                      self.year_eps_ratio2 = eps_info["year_eps_ratio2"]
+   622       174          143      0.8      8.2          if eps_info.has_key("year_eps_ratio3"):
+   623                                                      self.year_eps_ratio3 = eps_info["year_eps_ratio3"]
+   624       174          151      0.9      8.6          if eps_info.has_key("year_eps_ratio"):
+   625                                                      self.year_eps_ratio = eps_info["year_eps_ratio"]
+   626       174          454      2.6     26.0          if(self.market_cap == None):
+   627                                                       self.market_cap = 0
+   628                                                       log.info("error:market_cap is none code:%s"%(self.code))
+
+Total time: 0.006254 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: update_info at line 630
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   630                                               def update_info(self,price_info,eps_info):
+   631       174         2228     12.8     35.6          self.update_price_info(price_info)
+   632       174         4026     23.1     64.4          self.update_eps_info(eps_info)
+
+Total time: 0.000949 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: _init_data at line 635
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   635                                               def _init_data(self):
+   636        75           91      1.2      9.6          self.N = []
+   637        75           85      1.1      9.0          short_sys_data = {}
+   638        75           54      0.7      5.7          long_sys_data = {}
+   639        75           68      0.9      7.2          self.sys_dict = {}   
+   640        75          153      2.0     16.1          self.sys_dict[g.short_sys_key] = short_sys_data
+   641        75           91      1.2      9.6          self.sys_dict[g.long_sys_key] = long_sys_data
+   642        75           58      0.8      6.1          short_sys_data["portfolio_strategy_short"] = 0
+   643        75           54      0.7      5.7          long_sys_data["portfolio_strategy_long"] = 0
+   644        75           61      0.8      6.4          self.year_eps_ratio2 = None
+   645        75           56      0.7      5.9          self.year_eps_ratio3 = None
+   646        75           74      1.0      7.8          self.year_eps_ratio = None
+   647        75          104      1.4     11.0          self.portfolio_strategy_short = 0
+
+Total time: 1.63927 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: run_daily at line 650
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   650                                               def run_daily(self,context):
+   651                                                   #唐安琪通道最高最低价的周期不同
+   652       174       229779   1320.6     14.0          df = attribute_history(self.code,g.short_in_date,"1d",("high","low"))
+   653       174        36273    208.5      2.2          self.system_high_short = max(df.high)
+   654       174        69101    397.1      4.2          self.system_low_short = min(df.low[g.short_out_date:])
+   655                                           
+   656       174       239198   1374.7     14.6          df = attribute_history(self.code,g.long_in_date,"1d",("high","low"))
+   657       174        35383    203.4      2.2          self.system_high_long = max(df.high)
+   658       174        39039    224.4      2.4          self.system_low_long = min(df.low)
+   659       174       959536   5514.6     58.5          self.calculate_n()
+   660       174        30966    178.0      1.9          self.calculate_unit(context)
+
+Total time: 0.899538 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: calculate_n at line 663
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   663                                               def calculate_n(self):
+   664                                                   # 需要考虑停牌，上市交易天数过小,这时候是否需要参与交易
+   665       174          374      2.1      0.0          if(len(self.N) == 0):
+   666        75       111181   1482.4     12.4              price = attribute_history(self.code, g.number_days*2, '1d',('high','low','close'))
+   667        75          131      1.7      0.0              lst = []
+   668      3075         3744      1.2      0.4              for i in range(0, g.number_days*2):
+   669      3000       152952     51.0     17.0                  if(np.isnan(price['high'][i])):
+   670                                                               continue
+   671      3000       128034     42.7     14.2                  high_price = price['high'][i]
+   672      3000       137701     45.9     15.3                  low_price = price['low'][i]
+   673      3000         3468      1.2      0.4                  index = i
+   674      3000         3143      1.0      0.3                  if(i == 0):
+   675        75           77      1.0      0.0                      index = 0
+   676                                                           else:
+   677      2925         2981      1.0      0.3                      index = i-1
+   678      3000       130917     43.6     14.6                  last_close = price['close'][index]
+   679      3000         5313      1.8      0.6                  h_l = high_price-low_price
+   680      3000         3394      1.1      0.4                  h_c = high_price-last_close
+   681      3000         3340      1.1      0.4                  c_l = last_close-low_price
+   682                                                           # 计算 True Range 取计算第一天的前20天波动范围平均值
+   683      3000         5466      1.8      0.6                  True_Range = max(h_l, h_c, c_l)
+   684      3000         4389      1.5      0.5                  if(len(lst) < g.number_days):
+   685      1500         2171      1.4      0.2                      lst.append(True_Range)
+   686                                                           else:
+   687      1500         1925      1.3      0.2                      if(len(self.N) == 0):
+   688        75         4861     64.8      0.5                          current_N = np.mean(lst)
+   689        75          172      2.3      0.0                          (self.N).append(current_N)
+   690      1500         4620      3.1      0.5                      current_N = (True_Range + (g.number_days-1)*(self.N)[-1])/g.number_days
+   691      1500         2264      1.5      0.3                      (self.N).append(current_N)
+   692                                                   else:
+   693        99       125571   1268.4     14.0              price = attribute_history(self.code, 2, '1d',('high','low','close'))
+   694        99        34585    349.3      3.8              h_l = price['high'][0]-price['low'][0]
+   695        99        18039    182.2      2.0              h_c = price['high'][0]-price['close'][1]
+   696        99         7670     77.5      0.9              c_l = price['close'][1]-price['low'][0]
+   697                                                       # Calculate the True Range
+   698        99          276      2.8      0.0              True_Range = max(h_l, h_c, c_l)
+   699                                                       # 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
+   700        99          603      6.1      0.1              current_N = (True_Range + (g.number_days-1)*(self.N)[-1])/g.number_days
+   701        99          176      1.8      0.0              (self.N).append(current_N)
+
+Total time: 0.035838 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: has_break_max at line 703
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   703                                               def has_break_max(self,close,max_price):
+   704     17097        22562      1.3     63.0          if(close > max_price):
+   705         6            6      1.0      0.0              return True
+   706                                                   else:
+   707     17091        13270      0.8     37.0              return False
+
+Total time: 0.036902 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: has_break_min at line 709
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   709                                               def has_break_min(self,close,low_price):
+   710     23639        18641      0.8     50.5          if(close < low_price):
+   711         3            3      1.0      0.0              return True
+   712                                                   else:
+   713     23636        18258      0.8     49.5              return False
+
+Total time: 20.4442 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: start_process at line 715
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   715                                               def start_process(self,context):
+   716                                                   #短时系统操作（买入，加仓，止损，清仓）
+   717     40747       805226     19.8      3.9          current_data = get_current_data()
+   718     40747     12710964    311.9     62.2          current_price = current_data[self.code].last_price
+   719     40747      2318871     56.9     11.3          cash = context.portfolio.cash
+   720     40747      3034846     74.5     14.8          value = context.portfolio.portfolio_value
+   721     40747        44000      1.1      0.2          order_info = None
+   722     40747        51242      1.3      0.3          if(self.portfolio_strategy_short == 0):
+   723     17097       447410     26.2      2.2              order_info = self.try_market_in(current_price,cash)
+   724                                                   else:
+   725     23650       313916     13.3      1.5              order_info = self.try_stop_loss(current_price)
+   726     23650        27341      1.2      0.1              if(order_info != None):
+   727         3            3      1.0      0.0                  return order_info
+   728     23647       330507     14.0      1.6              order_info = self.try_market_add(current_price, g.ratio*cash)
+   729     23647        20594      0.9      0.1              if(order_info != None):
+   730         8            3      0.4      0.0                  return order_info 
+   731     23639       310012     13.1      1.5              order_info = self.try_market_out(current_price)
+   732     40736        29307      0.7      0.1          return order_info
+
+Total time: 0.347976 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: try_market_in at line 739
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   739                                               def try_market_in(self,current_price, cash):
+   740                                                  #短时系统操作是否可以入市
+   741     17097       102516      6.0     29.5          has_break_max = self.has_break_max(current_price,self.system_high_short)
+   742     17097        12841      0.8      3.7          if(not has_break_max):
+   743     17091        11866      0.7      3.4              return
+   744         6            6      1.0      0.0          num_of_shares = cash/current_price
+   745         6            6      1.0      0.0          if num_of_shares < self.unit:
+   746                                                       return
+   747         6            4      0.7      0.0          order_info = None
+   748         6           27      4.5      0.0          if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
+   749         6       218690  36448.3     62.8              order_info = order(self.code, int(self.unit))
+   750                                                       # self.portfolio_strategy_short += int(self.unit)
+   751         6           14      2.3      0.0              self.break_price_short = current_price
+   752         6         2000    333.3      0.6              print "开仓！当前价：%s,最高价：%s,N:%s"%(current_price,self.system_high_short,self.N[-1])
+   753         6            6      1.0      0.0          return order_info 
+
+Total time: 0.144379 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: try_market_add at line 758
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   758                                               def try_market_add(self,current_price, cash):
+   759     23647        19546      0.8     13.5          break_price = self.break_price_short
+   760                                                   # 每上涨0.5N，加仓一个单元
+   761     23647        36960      1.6     25.6          if current_price < break_price + 0.5*(self.N)[-1]: 
+   762     10732         7801      0.7      5.4              return
+   763     12915        12124      0.9      8.4          num_of_shares = cash/current_price
+   764     12915        12134      0.9      8.4          if num_of_shares < self.unit: 
+   765     12907         8844      0.7      6.1              return
+   766                                           
+   767         8            7      0.9      0.0          order_info = None
+   768         8           27      3.4      0.0          if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
+   769         8        44232   5529.0     30.6              order_info = order(self.code, int(self.unit))
+   770                                                       # self.portfolio_strategy_short += int(self.unit)
+   771         8           17      2.1      0.0              self.break_price_short = current_price
+   772         8         2676    334.5      1.9              print "加仓！当前价：%s,上次突破买入价：%s，N:%s,unit:%s,position:%s"%(current_price,break_price,self.N[-1],self.unit,self.portfolio_strategy_short)
+   773         8           11      1.4      0.0          return order_info
+
+Total time: 0.198641 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: try_market_out at line 778
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   778                                               def try_market_out(self,current_price):
+   779                                                   # Function for leaving the market
+   780     23639       121141      5.1     61.0          has_break_min = self.has_break_min(current_price ,self.system_low_short)
+   781                                                   # 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
+   782     23639        15841      0.7      8.0          if not has_break_min:
+   783     23636        13724      0.6      6.9              return
+   784         3        33105  11035.0     16.7          print current_price
+   785                                                   # print min(price['close'])
+   786         3            4      1.3      0.0          order_info = None
+   787         3            3      1.0      0.0          if self.portfolio_strategy_short > 0:
+   788                                                       # self.portfolio_strategy_short = 0
+   789         3        13901   4633.7      7.0              order_info = order(self.code, -self.portfolio_strategy_short)
+   790         3          919    306.3      0.5              print "离场！当前价：%s,最低价：%s，position:%s"%(current_price,self.system_low_short,self.portfolio_strategy_short)
+   791         3            3      1.0      0.0          return order_info
+
+Total time: 0.152007 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: try_stop_loss at line 796
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   796                                               def try_stop_loss(self,current_price):
+   797                                                   # 损失大于2N，卖出股票
+   798     23650        21864      0.9     14.4          break_price = self.break_price_short
+   799                                                   # If the price has decreased by 2N, then clear all position
+   800     23650        17350      0.7     11.4          order_info = None
+   801     23650        78312      3.3     51.5          if current_price < (break_price - 2*(self.N)[-1]):
+   802                                                       # print break_price - 2*(g.N)[-1]
+   803                                                       # self.portfolio_strategy_short = 0  
+   804         3        17557   5852.3     11.6              order_info = order(self.code, - self.portfolio_strategy_short)
+   805         3         1215    405.0      0.8              print "止损！当前价：%s,上次突破买入价：%s，N:%s,position:%s"%(current_price,break_price,self.N[-1],self.portfolio_strategy_short)
+   806     23650        15709      0.7     10.3          return order_info
+
+Total time: 0.029259 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: calculate_unit at line 808
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   808                                               def calculate_unit(self,context):
+   809       174        28288    162.6     96.7          value = context.portfolio.total_value
+   810                                                    # 计算波动的价格
+   811       174          685      3.9      2.3          dollar_volatility = g.dollars_per_share*(self.N)[-1]
+   812                                                   # 依本策略，计算买卖的单位
+   813       174          286      1.6      1.0          self.unit = value*0.01/dollar_volatility
+
+Total time: 0.002344 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: add_buy_count at line 816
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   816                                               def add_buy_count(self,count):
+   817         8         2306    288.2     98.4          print("add_buy_count:",self.code,count,self.portfolio_strategy_short)
+   818         8           38      4.8      1.6          self.portfolio_strategy_short += count
+
+Total time: 0.001825 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: reduce_buy_count at line 821
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   821                                               def reduce_buy_count(self,count):
+   822         6         1804    300.7     98.8          print("reduce_buy_count:",self.code,count,self.portfolio_strategy_short)
+   823                                           
+   824         6           21      3.5      1.2          self.portfolio_strategy_short -= count
+
+Total time: 6e-06 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: get_buy_count at line 827
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   827                                               def get_buy_count(self):
+   828         6            6      1.0    100.0          return self.portfolio_strategy_short
+
+Total time: 7e-06 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: set_buy_count at line 831
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   831                                               def set_buy_count(self,count):
+   832         6            7      1.2    100.0          self.portfolio_strategy_short = count
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: __str__ at line 834
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   834                                               def __str__(self):
+   835                                                   log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
+   836                                                   self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
+   837                                                   return ""
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: __init__ at line 840
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   840                                               def __init__(self):
+   841                                                   pass
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: init_data at line 842
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   842                                               def init_data(self):
+   843                                                   self.daliy_pool = []
+   844                                                   pass
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: daily_process at line 845
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   845                                               def daily_process(self):
+   846                                                   pass
+
+Total time: 0 s
+File: /tmp/codejail/67/9199667/tmp3fOGuw/user_code.py
+Function: daily_end at line 847
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   847                                               def daily_end(self):
+   848                                                   pass

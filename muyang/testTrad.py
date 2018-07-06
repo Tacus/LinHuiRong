@@ -126,24 +126,7 @@ def init_turtle_data():
     # 系统1所配金额占总金额比例
     g.ratio = 0.8
 
-    g.unit = 1000
-    # A list storing info of N
     g.N = []
-    # Record the number of days for this trading system
-    g.days = 0
-    # 系统1的突破价格
-    g.break_price1 = 0
-    # 系统2的突破价格
-    g.break_price2 = 0
-    # 系统1建的仓数
-    g.sys1 = 0
-    # 系统2建的仓数
-    g.sys2 = 0
-    # 系统1执行且系统2不执行
-    g.system1 = True  
-
-    g.short_sys_key = "short_sys_key"  
-    g.long_sys_key = "long_sys_key"
 
     #计算N天内最从高价回落最多%M
     g.rblh_d = 250
@@ -633,13 +616,6 @@ class StockInfo:
     #初始化
     def _init_data(self):
         self.N = []
-        short_sys_data = {}
-        long_sys_data = {}
-        self.sys_dict = {}   
-        self.sys_dict[g.short_sys_key] = short_sys_data
-        self.sys_dict[g.long_sys_key] = long_sys_data
-        short_sys_data["portfolio_strategy_short"] = 0
-        long_sys_data["portfolio_strategy_long"] = 0
         self.year_eps_ratio2 = None
         self.year_eps_ratio3 = None
         self.year_eps_ratio = None
@@ -780,7 +756,6 @@ class StockInfo:
         # 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
         if not has_break_min:
             return
-        print current_price
         # print min(price['close'])
         order_info = None
         if self.portfolio_strategy_short > 0:
