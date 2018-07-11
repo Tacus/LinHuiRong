@@ -13,7 +13,9 @@ import math
 from sqlalchemy import or_
 from jy_sw_industry_code import *
 
-index_list = ['OpenPrice','ClosePrice']
+jydf = jy.run_query(query(jy.SecuMain))
+
+index_list = ['OpenPrice','ClosePrice','InnerCode']
 
 
 def initialize(context):
@@ -209,18 +211,49 @@ def common_get_weight(list):
         # print("common_get_weight:",x["secu"],index,size,value)
 
 def get_ratioandsort(secus,start_date,end_date):
+    # 获取行业指数
+    jydf = jy.run_query(query(jy.SecuMain).filter(jy.SecuMain.SecuCode.in_(secus)))
+    result=jydf['InnerCode']
+    # print(jydf)
+    df = jy.run_query(query(jy.QT_SYWGIndexQuote).filter(jy.QT_SYWGIndexQuote.InnerCode.in_( result),\
+                                                  jy.QT_SYWGIndexQuote.TradingDay>=start_date,\
+                                                         jy.QT_SYWGIndexQuote.TradingDay<=end_date
+                                                      ))
+    series = pd.Series(jydf["SecuCode"].tolist(),index = result)
+    # print(dir(result))
+    df = df[index_list]
+    offset = 0
+
     securitys = list()
-    for x in secus:
-        df = get_SW_index(x,start_date,end_date)
-        if(df.empty):
-            continue
-        ratio = get_ratio(df)
-        if math.isnan(ratio):
-            ratio = 0
-        securitys.append({"secu":x,"value":ratio})
+    currentSecuCode = None
+    closePrice_open = None
+    closePrice_close = None
+    while len(df) >= 0 :
+        dflist = list(df.itertuples(index=False))
+        for array in dflist :
+            if(array[2] != currentSecuCode):
+
+                if(currentSecuCode != None):
+                    ratio = (closePrice_close - closePrice_open)/closePrice_open 
+                    securitys.append({"secu":series.loc(currentSecuCode),"value":ratio})
+                closePrice_open = array[0]
+                
+                currentSecuCode = array[2]
+
+            closePrice_close = array[1]
+
+            
+        offset += len(df)
+        df = jy.run_query(query(jy.QT_SYWGIndexQuote).filter(jy.QT_SYWGIndexQuote.InnerCode.in_( result),\
+                                                  jy.QT_SYWGIndexQuote.TradingDay>=start_date,\
+                                                         jy.QT_SYWGIndexQuote.TradingDay<=end_date
+                                                      )).offset(offset)
+        df = df[index_list]
+        
     result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
     common_get_weight(result)
     return result
+    # return df[index_list],series
 
 def get_ratio(df):
     openPrice = df["ClosePrice"][0]
@@ -614,6 +647,7 @@ class StockInfo:
     #初始化
     def _init_data(self):
         self.N = []
+        long_sys_data["portfolio_strategy_long"] = 0
         self.year_eps_ratio2 = None
         self.year_eps_ratio3 = None
         self.year_eps_ratio = None
