@@ -247,7 +247,7 @@ def get_ratioandsort(secus,start_date,end_date):
         df = jy.run_query(query(jy.QT_SYWGIndexQuote).filter(jy.QT_SYWGIndexQuote.InnerCode.in_( result),\
                                                   jy.QT_SYWGIndexQuote.TradingDay>=start_date,\
                                                          jy.QT_SYWGIndexQuote.TradingDay<=end_date
-                                                      )).offset(offset)
+                                                      ).offset(offset))
         df = df[index_list]
         
     result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
