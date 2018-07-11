@@ -228,7 +228,7 @@ def get_ratioandsort(secus,start_date,end_date):
     currentSecuCode = None
     closePrice_open = None
     closePrice_close = None
-    while len(df) >= 0 :
+    while len(df) > 0 :
         dflist = list(df.itertuples(index=False))
         for array in dflist :
             if(array[2] != currentSecuCode):
@@ -242,7 +242,6 @@ def get_ratioandsort(secus,start_date,end_date):
 
             closePrice_close = array[1]
 
-            
         offset += len(df)
         df = jy.run_query(query(jy.QT_SYWGIndexQuote).filter(jy.QT_SYWGIndexQuote.InnerCode.in_( result),\
                                                   jy.QT_SYWGIndexQuote.TradingDay>=start_date,\
@@ -647,7 +646,6 @@ class StockInfo:
     #初始化
     def _init_data(self):
         self.N = []
-        long_sys_data["portfolio_strategy_long"] = 0
         self.year_eps_ratio2 = None
         self.year_eps_ratio3 = None
         self.year_eps_ratio = None
