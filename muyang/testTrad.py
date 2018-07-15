@@ -49,7 +49,7 @@ def initialize(context):
 
 #获取有效股票并更新有效股票历史数据 price_info,eps_info
 def before_trading_start(context):
-    g.stock_pool = get_valid_stocks(context)
+    g.stock_pool = get_valid_stocks(context,g.debug_stocks)
     for single in g.stock_pool:
         single.run_daily(context)
 
@@ -152,7 +152,16 @@ def secuindex_sort(el1,el2):
     else:
         return -1
 #获取有效的eps price条件股票
-def get_valid_stocks(context):
+def get_valid_stocks(context,securitys = None):
+    result = []
+    if(securitys != None):
+        for i in range(len(securitys)):
+            security = securitys[i]
+            fake_eps_info = {"code":security}
+            stInfo = get_stock_info(None,fake_eps_info)
+            if(stInfo != None):
+                result.append(stInfo)
+        return result
     cur_date = context.current_dt
     g.all_trade_days = jqdata.get_trade_days(end_date = cur_date,count = 300)
     start_date = g.all_trade_days[-g.industry_rangeDays]
@@ -160,7 +169,6 @@ def get_valid_stocks(context):
     sortedList_level2 = get_ratioandsort(SW2,start_date,cur_date)
     mighty_price_list = get_mighty_price_stocks(context,sortedList_level1,sortedList_level2)
     mighty_eps_list = get_mighty_eps_stocks(context,g.debug_stocks)
-    result = []
     for stock,price_stock in mighty_price_list.items():
         for eps_stock in mighty_eps_list :
             if eps_stock["code"] == stock:
@@ -333,7 +341,6 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
     for x in result:
         # security_name = sw1mapdf.loc[x["secu"]]
         security = x["secu"]
-        security_name = sw1mapdf[sw1mapdf["code"] == security]
         close = data[security].last_price
         security_avg1 = avg_1[security]
         security_avg2 = avg_2[security]
@@ -346,19 +353,15 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
         #     security_avg3,min_close,max_close) )
         
         stock_score = x["weight"]
-        if(security_name is not None and close>security_avg1 
+        if(close>security_avg1 
             and security_avg1>security_avg2 
             and security_avg2>security_avg3
             and close>min_close*1.1
             and close>max_close*0.7
             and stock_score >87):
-            if(security_name["display_name"].size == 0):
-                #  log.info("name 为空",security,security_name,sw1mapdf)
-                 continue
-            security_name = security_name["display_name"][0]
+ 
             # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s"%(x["secu"],security_name,index,x["value"],x["weight"] ) )
             x["index"] = index
-            x["security_name"] = security_name
             index += 1
             fileter_securitys[x["secu"]] = x
             stocks.append(x["secu"])
@@ -461,12 +464,15 @@ def get_mighty_eps_stocks(context,securitys=None):
         # x["eps_ratio2"] = math.floor(ratio2*100)
         if(ratio<0.2 or ratio2 <0.2):
             continue
+        security_name = sw1mapdf[sw1mapdf["code"] == code]
+        security_name = security_name["security_name"][0]
         result.append({"code":code,
         "eps_ratio":round(ratio*100,1),
         "eps_ratio2":round(ratio2*100,1),
         "eps_date":dt_str,
         "eps_date2":dt_str2,
-        "market_cap":market_cap
+        "market_cap":market_cap,
+        "security_name":security_name
         })
         # result.append({"code":code,"eps_ratio":round(ratio*100,1),"eps_ratio2":round(ratio2*100,1)})
         # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,eps增长率：%s%%"%(x["secu"],x["security_name"],x["index"],x["value"],math.floor(x["weight"]) ,math.floor(ratio*100)) )
@@ -618,17 +624,25 @@ class StockInfo:
         self.update_info(price_info,eps_info)
     #更新价格
     def update_price_info(self,price_info):
+        if(price_info == None):
+            return
         self.value = price_info["value"]
-        self.security_name = price_info["security_name"]
         self.index = price_info["index"]
         self.weight = price_info["weight"]
 
     #更新eps信息
     def update_eps_info(self,eps_info):
         self.code = eps_info["code"]
-        self.eps_ratio2 = eps_info["eps_ratio2"]
-        self.eps_ratio = eps_info["eps_ratio"]       
-        self.market_cap = eps_info["market_cap"]
+        if(self.code == None):
+            return
+        if eps_info.has_key("eps_ratio2"):
+           self.eps_ratio2 = eps_info["eps_ratio2"]
+        if eps_info.has_key("security_name"):
+           self.security_name = eps_info["security_name"]
+        if eps_info.has_key("eps_ratio"):
+           self.eps_ratio = eps_info["eps_ratio"]
+        if eps_info.has_key("market_cap"):
+           self.market_cap = eps_info["market_cap"]
         if eps_info.has_key("year_eps_ratio2"):
            self.year_eps_ratio2 = eps_info["year_eps_ratio2"]
         if eps_info.has_key("year_eps_ratio3"):
@@ -649,6 +663,7 @@ class StockInfo:
         self.year_eps_ratio2 = None
         self.year_eps_ratio3 = None
         self.year_eps_ratio = None
+        self.market_cap = None
         self.portfolio_strategy_short = 0
 
     #每日更新当前数据信息
@@ -833,8 +848,8 @@ class StockInfo:
         self.portfolio_strategy_short = count
 
     def __str__(self):
-        log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
-        self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
+        # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
+        # self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
         return ""
 #股票管理类
 class StockManager():
