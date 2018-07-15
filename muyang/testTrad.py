@@ -38,8 +38,8 @@ def initialize(context):
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
 
-    # g.debug_stocks = ["300323.XSHE"]
-    g.debug_stocks = None
+    g.debug_stocks = ["300323.XSHE"]
+    # g.debug_stocks = None
     g.stock_pool = []
     g.position_pool = {}
     init_turtle_data()
