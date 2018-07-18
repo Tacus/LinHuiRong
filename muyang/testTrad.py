@@ -649,9 +649,6 @@ class StockInfo:
            self.year_eps_ratio3 = eps_info["year_eps_ratio3"]
         if eps_info.has_key("year_eps_ratio"):
            self.year_eps_ratio = eps_info["year_eps_ratio"]
-        if(self.market_cap == None):
-            self.market_cap = 0
-            log.info("error:market_cap is none code:%s"%(self.code))
     #更新
     def update_info(self,price_info,eps_info):
         self.update_price_info(price_info)
@@ -663,7 +660,7 @@ class StockInfo:
         self.year_eps_ratio2 = None
         self.year_eps_ratio3 = None
         self.year_eps_ratio = None
-        self.market_cap = None
+        self.market_cap = 0
         self.portfolio_strategy_short = 0
 
     #每日更新当前数据信息
