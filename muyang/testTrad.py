@@ -15,7 +15,7 @@ from jy_sw_industry_code import *
 
 jydf = jy.run_query(query(jy.SecuMain))
 
-index_list = ['OpenPrice','ClosePrice']
+index_list = ['OpenPrice','ClosePrice','InnerCode']
 
 
 def initialize(context):
@@ -38,18 +38,23 @@ def initialize(context):
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
 
-    # g.debug_stocks = ["000729.XSHE"]
-    g.debug_stocks = None
+    g.debug_stocks = ["300323.XSHE"]
+    # g.debug_stocks = None
     g.stock_pool = []
     g.position_pool = {}
     init_turtle_data()
-
+    # run_weekly(weekly_fun,"open")
     #计算N天内最从高价回落最多%M
 
+#设定每周第一个交易日为该周内账户总市值
+def weekly_fun(context):
+    date = context.current_dt
+    g.total_value = context.portfolio.total_value
+    print("current date:%s,total_value:%d"%(str(date),g.total_value))
 
 #获取有效股票并更新有效股票历史数据 price_info,eps_info
 def before_trading_start(context):
-    g.stock_pool = get_valid_stocks(context)
+    g.stock_pool = get_valid_stocks(context,g.debug_stocks)
     for single in g.stock_pool:
         single.run_daily(context)
 
@@ -61,6 +66,7 @@ def handle_data(context, data):
 
     for _,stock_info in g.position_pool.items():
         order = stock_info.start_process(context)
+
         if order != None and order.filled  > 0 and order.is_buy :
             stock_info.add_buy_count( order.filled)
         elif(order != None and order.filled > 0 and not order.is_buy):
@@ -125,24 +131,7 @@ def init_turtle_data():
     # 系统1所配金额占总金额比例
     g.ratio = 0.8
 
-    g.unit = 1000
-    # A list storing info of N
     g.N = []
-    # Record the number of days for this trading system
-    g.days = 0
-    # 系统1的突破价格
-    g.break_price1 = 0
-    # 系统2的突破价格
-    g.break_price2 = 0
-    # 系统1建的仓数
-    g.sys1 = 0
-    # 系统2建的仓数
-    g.sys2 = 0
-    # 系统1执行且系统2不执行
-    g.system1 = True  
-
-    g.short_sys_key = "short_sys_key"  
-    g.long_sys_key = "long_sys_key"
 
     #计算N天内最从高价回落最多%M
     g.rblh_d = 250
@@ -168,7 +157,16 @@ def secuindex_sort(el1,el2):
     else:
         return -1
 #获取有效的eps price条件股票
-def get_valid_stocks(context):
+def get_valid_stocks(context,securitys = None):
+    result = []
+    if(securitys != None):
+        for i in range(len(securitys)):
+            security = securitys[i]
+            fake_eps_info = {"code":security}
+            stInfo = get_stock_info(None,fake_eps_info)
+            if(stInfo != None):
+                result.append(stInfo)
+        return result
     cur_date = context.current_dt
     g.all_trade_days = jqdata.get_trade_days(end_date = cur_date,count = 300)
     start_date = g.all_trade_days[-g.industry_rangeDays]
@@ -176,7 +174,6 @@ def get_valid_stocks(context):
     sortedList_level2 = get_ratioandsort(SW2,start_date,cur_date)
     mighty_price_list = get_mighty_price_stocks(context,sortedList_level1,sortedList_level2)
     mighty_eps_list = get_mighty_eps_stocks(context,g.debug_stocks)
-    result = []
     for stock,price_stock in mighty_price_list.items():
         for eps_stock in mighty_eps_list :
             if eps_stock["code"] == stock:
@@ -199,10 +196,10 @@ def get_valid_stocks(context):
                 # eps_stock["eps_ratio"]))
     gr_index2 = get_growth_rate("000016.XSHG")
     gr_index8 = get_growth_rate("399333.XSHE")
-    if(gr_index8<gr_index2):
-        log.info("当前大盘强于小盘",gr_index2,gr_index8)
-    else:
-        log.info("当前小盘强于大盘",gr_index2,gr_index8)
+    # if(gr_index8<gr_index2):
+    #     log.info("当前大盘强于小盘",gr_index2,gr_index8)
+    # else:
+    #     log.info("当前小盘强于大盘",gr_index2,gr_index8)
     result = sorted(result,key = lambda d: d.market_cap,reverse = gr_index2>gr_index8)
     return result
 
@@ -227,18 +224,48 @@ def common_get_weight(list):
         # print("common_get_weight:",x["secu"],index,size,value)
 
 def get_ratioandsort(secus,start_date,end_date):
+    # 获取行业指数
+    jydf = jy.run_query(query(jy.SecuMain).filter(jy.SecuMain.SecuCode.in_(secus)))
+    result=jydf['InnerCode']
+    # print(jydf)
+    df = jy.run_query(query(jy.QT_SYWGIndexQuote).filter(jy.QT_SYWGIndexQuote.InnerCode.in_( result),\
+                                                  jy.QT_SYWGIndexQuote.TradingDay>=start_date,\
+                                                         jy.QT_SYWGIndexQuote.TradingDay<=end_date
+                                                      ))
+    series = pd.Series(jydf["SecuCode"].tolist(),index = result)
+    # print(dir(result))
+    df = df[index_list]
+    offset = 0
+
     securitys = list()
-    for x in secus:
-        df = get_SW_index(x,start_date,end_date)
-        if(df.empty):
-            continue
-        ratio = get_ratio(df)
-        if math.isnan(ratio):
-            ratio = 0
-        securitys.append({"secu":x,"value":ratio})
+    currentSecuCode = None
+    closePrice_open = None
+    closePrice_close = None
+    while len(df) > 0 :
+        dflist = list(df.itertuples(index=False))
+        for array in dflist :
+            if(array[2] != currentSecuCode):
+
+                if(currentSecuCode != None):
+                    ratio = (closePrice_close - closePrice_open)/closePrice_open 
+                    securitys.append({"secu":series.loc(currentSecuCode),"value":ratio})
+                closePrice_open = array[0]
+                
+                currentSecuCode = array[2]
+
+            closePrice_close = array[1]
+
+        offset += len(df)
+        df = jy.run_query(query(jy.QT_SYWGIndexQuote).filter(jy.QT_SYWGIndexQuote.InnerCode.in_( result),\
+                                                  jy.QT_SYWGIndexQuote.TradingDay>=start_date,\
+                                                         jy.QT_SYWGIndexQuote.TradingDay<=end_date
+                                                      ).offset(offset))
+        df = df[index_list]
+        
     result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
     common_get_weight(result)
     return result
+    # return df[index_list],series
 
 def get_ratio(df):
     openPrice = df["ClosePrice"][0]
@@ -319,7 +346,6 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
     for x in result:
         # security_name = sw1mapdf.loc[x["secu"]]
         security = x["secu"]
-        security_name = sw1mapdf[sw1mapdf["code"] == security]
         close = data[security].last_price
         security_avg1 = avg_1[security]
         security_avg2 = avg_2[security]
@@ -332,19 +358,15 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
         #     security_avg3,min_close,max_close) )
         
         stock_score = x["weight"]
-        if(security_name is not None and close>security_avg1 
+        if(close>security_avg1 
             and security_avg1>security_avg2 
             and security_avg2>security_avg3
             and close>min_close*1.1
             and close>max_close*0.7
             and stock_score >87):
-            if(security_name["display_name"].size == 0):
-                #  log.info("name 为空",security,security_name,sw1mapdf)
-                 continue
-            security_name = security_name["display_name"][0]
+ 
             # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s"%(x["secu"],security_name,index,x["value"],x["weight"] ) )
             x["index"] = index
-            x["security_name"] = security_name
             index += 1
             fileter_securitys[x["secu"]] = x
             stocks.append(x["secu"])
@@ -447,12 +469,15 @@ def get_mighty_eps_stocks(context,securitys=None):
         # x["eps_ratio2"] = math.floor(ratio2*100)
         if(ratio<0.2 or ratio2 <0.2):
             continue
+        security_name = sw1mapdf[sw1mapdf["code"] == code]
+        security_name = security_name["security_name"][0]
         result.append({"code":code,
         "eps_ratio":round(ratio*100,1),
         "eps_ratio2":round(ratio2*100,1),
         "eps_date":dt_str,
         "eps_date2":dt_str2,
-        "market_cap":market_cap
+        "market_cap":market_cap,
+        "security_name":security_name
         })
         # result.append({"code":code,"eps_ratio":round(ratio*100,1),"eps_ratio2":round(ratio2*100,1)})
         # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,eps增长率：%s%%"%(x["secu"],x["security_name"],x["index"],x["value"],math.floor(x["weight"]) ,math.floor(ratio*100)) )
@@ -604,26 +629,31 @@ class StockInfo:
         self.update_info(price_info,eps_info)
     #更新价格
     def update_price_info(self,price_info):
+        if(price_info == None):
+            return
         self.value = price_info["value"]
-        self.security_name = price_info["security_name"]
         self.index = price_info["index"]
         self.weight = price_info["weight"]
 
     #更新eps信息
     def update_eps_info(self,eps_info):
         self.code = eps_info["code"]
-        self.eps_ratio2 = eps_info["eps_ratio2"]
-        self.eps_ratio = eps_info["eps_ratio"]       
-        self.market_cap = eps_info["market_cap"]
+        if(self.code == None):
+            return
+        if eps_info.has_key("eps_ratio2"):
+           self.eps_ratio2 = eps_info["eps_ratio2"]
+        if eps_info.has_key("security_name"):
+           self.security_name = eps_info["security_name"]
+        if eps_info.has_key("eps_ratio"):
+           self.eps_ratio = eps_info["eps_ratio"]
+        if eps_info.has_key("market_cap"):
+           self.market_cap = eps_info["market_cap"]
         if eps_info.has_key("year_eps_ratio2"):
            self.year_eps_ratio2 = eps_info["year_eps_ratio2"]
         if eps_info.has_key("year_eps_ratio3"):
            self.year_eps_ratio3 = eps_info["year_eps_ratio3"]
         if eps_info.has_key("year_eps_ratio"):
            self.year_eps_ratio = eps_info["year_eps_ratio"]
-        if(self.market_cap == None):
-            self.market_cap = 0
-            log.info("error:market_cap is none code:%s"%(self.code))
     #更新
     def update_info(self,price_info,eps_info):
         self.update_price_info(price_info)
@@ -632,29 +662,26 @@ class StockInfo:
     #初始化
     def _init_data(self):
         self.N = []
-        short_sys_data = {}
-        long_sys_data = {}
-        self.sys_dict = {}   
-        self.sys_dict[g.short_sys_key] = short_sys_data
-        self.sys_dict[g.long_sys_key] = long_sys_data
-        short_sys_data["portfolio_strategy_short"] = 0
-        long_sys_data["portfolio_strategy_long"] = 0
         self.year_eps_ratio2 = None
         self.year_eps_ratio3 = None
         self.year_eps_ratio = None
+        self.market_cap = 0
         self.portfolio_strategy_short = 0
+        self.position_day = 0
 
     #每日更新当前数据信息
     def run_daily(self,context):
+        #唐安琪通道最高最低价的周期不同
         df = attribute_history(self.code,g.short_in_date,"1d",("high","low"))
         self.system_high_short = max(df.high)
-        self.system_low_short = min(df.low)
+        self.system_low_short = min(df.low[g.short_out_date:])
 
         df = attribute_history(self.code,g.long_in_date,"1d",("high","low"))
         self.system_high_long = max(df.high)
         self.system_low_long = min(df.low)
         self.calculate_n()
-        self.calculate_unit(context)
+        if(self.portfolio_strategy_short!=0):
+            self.position_day += 1
 
     #计算海龟系统N
     def calculate_n(self):
@@ -665,9 +692,17 @@ class StockInfo:
             for i in range(0, g.number_days*2):
                 if(np.isnan(price['high'][i])):
                     continue
-                h_l = price['high'][i]-price['low'][i]
-                h_c = price['high'][i]-price['close'][i]
-                c_l = price['close'][i]-price['low'][i]
+                high_price = price['high'][i]
+                low_price = price['low'][i]
+                index = i
+                if(i == 0):
+                    index = 0
+                else:
+                    index = i-1
+                last_close = price['close'][index]
+                h_l = high_price-low_price
+                h_c = high_price-last_close
+                c_l = last_close-low_price
                 # 计算 True Range 取计算第一天的前20天波动范围平均值
                 True_Range = max(h_l, h_c, c_l)
                 if(len(lst) < g.number_days):
@@ -679,10 +714,10 @@ class StockInfo:
                     current_N = (True_Range + (g.number_days-1)*(self.N)[-1])/g.number_days
                     (self.N).append(current_N)
         else:
-            price = attribute_history(self.code, 1, '1d',('high','low','close'))
+            price = attribute_history(self.code, 2, '1d',('high','low','close'))
             h_l = price['high'][0]-price['low'][0]
-            h_c = price['high'][0]-price['close'][0]
-            c_l = price['close'][0]-price['low'][0]
+            h_c = price['high'][0]-price['close'][1]
+            c_l = price['close'][1]-price['low'][0]
             # Calculate the True Range
             True_Range = max(h_l, h_c, c_l)
             # 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
@@ -702,18 +737,30 @@ class StockInfo:
             return False
 
     def start_process(self,context):
+        self.calculate_unit(context)
+        if(self.unit == 0):
+            return
         #短时系统操作（买入，加仓，止损，清仓）
         current_data = get_current_data()
         current_price = current_data[self.code].last_price
         cash = context.portfolio.cash
-        value = context.portfolio.portfolio_value
         order_info = None
         if(self.portfolio_strategy_short == 0):
-            order_info = self.try_market_in(current_price,cash,self.system_high_short)
+            order_info = self.try_market_in(current_price,cash)
         else:
             order_info = self.try_stop_loss(current_price)
-            order_info = self.try_market_add(current_price, g.ratio*cash, g.short_in_date)    
-            order_info = self.try_market_out(current_price, g.short_out_date)
+            if(order_info != None):
+                return order_info
+            order_info = self.try_market_add(current_price, g.ratio*cash)
+            if(order_info != None):
+                return order_info
+            order_info = self.try_market_out(current_price)
+            if(order_info != None):
+                return order_info
+            order_info = self.try_market_stop_profit(current_price)
+            if(order_info != None):
+                return order_info
+
         return order_info
     #6
     # 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
@@ -721,7 +768,7 @@ class StockInfo:
     # 输入：当前价格-float, 现金-float, 天数-int
     # 输出：none
     #暂时只考虑一个系统运行情况
-    def try_market_in(self,current_price, cash, in_date):
+    def try_market_in(self,current_price, cash):
        #短时系统操作是否可以入市
         has_break_max = self.has_break_max(current_price,self.system_high_short)
         if(not has_break_max):
@@ -729,51 +776,59 @@ class StockInfo:
         num_of_shares = cash/current_price
         if num_of_shares < self.unit:
             return
-        order_info = None
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
-            print "开仓"
             order_info = order(self.code, int(self.unit))
             # self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
-        return order_info 
+            self.next_add_price = current_price + 0.5*self.N[-1]
+            self.next_out_price = current_price - 2*self.N[-1]
+            self.mark_in_price = current_price
+
+            print "开仓！当前价：%s,最高价：%s,N:%s"%(current_price,self.system_high_short,self.N[-1])
+            return order_info 
     #7
     # 加仓函数
     # 输入：当前价格-float, 现金-float, 天数-int
     # 输出：none
-    def try_market_add(self,current_price, cash, in_date):
+    def try_market_add(self,current_price, cash):
         break_price = self.break_price_short
         # 每上涨0.5N，加仓一个单元
-        if current_price < break_price + 0.5*(self.N)[-1]: 
+        if current_price < self.next_add_price: 
             return
         num_of_shares = cash/current_price
         if num_of_shares < self.unit: 
             return
-
-        print "加仓"
-        order_info = None
-        if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
-            order_info = order(self.code, int(self.unit))
-            # self.portfolio_strategy_short += int(self.unit)
-            self.break_price_short = current_price
+        order_info = order(self.code, int(self.unit))
+        # self.portfolio_strategy_short += int(self.unit)
+        self.break_price_short = current_price
+        self.next_add_price = current_price + 0.5*self.N[-1]
+        self.next_out_price = current_price - 2*self.N[-1]
+        print "加仓！当前价：%s,上次突破买入价：%s，N:%s,unit:%s,position:%s"%(current_price,break_price,self.N[-1],self.unit,self.portfolio_strategy_short)
         return order_info
     #8
     # 离场函数
     # 输入：当前价格-float, 天数-int
     # 输出：none
-    def try_market_out(self,current_price, out_date):
+    def try_market_out(self,current_price):
         # Function for leaving the market
         has_break_min = self.has_break_min(current_price ,self.system_low_short)
         # 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
         if not has_break_min:
             return
-        print "离场"
-        print current_price
         # print min(price['close'])
-        order_info = None
         if self.portfolio_strategy_short > 0:
             # self.portfolio_strategy_short = 0
             order_info = order(self.code, -self.portfolio_strategy_short)
-        return order_info
+            print "离场！当前价：%s,最低价：%s，position:%s"%(current_price,self.system_low_short,self.portfolio_strategy_short)
+            return order_info
+
+    #15交易日涨幅小于20%退出
+    def try_market_stop_profit(self,current_price):
+        # Function for leaving the market
+        if(self.position_day >=15 and (self.break_price_short - self.mark_in_price)/self.mark_in_price <0.2):
+            print "-%s交易日未满足涨幅20,入场价：%s,当前价:%s"%(self.position_day,self.mark_in_price,self.break_price_short)
+            return order(self.code, -self.portfolio_strategy_short)
+
     #9
     # 止损函数
     # 输入：当前价格-float
@@ -782,21 +837,25 @@ class StockInfo:
         # 损失大于2N，卖出股票
         break_price = self.break_price_short
         # If the price has decreased by 2N, then clear all position
-        order_info = None
-        if current_price < (break_price - 2*(self.N)[-1]):
-            print "止损"
-            print current_price
+        if current_price < self.next_out_price:
             # print break_price - 2*(g.N)[-1]
             # self.portfolio_strategy_short = 0  
             order_info = order(self.code, - self.portfolio_strategy_short)
-        return order_info
+            print "止损！当前价：%s,上次突破买入价：%s，N:%s,position:%s"%(current_price,break_price,self.N[-1],self.portfolio_strategy_short)
+            return order_info
     #计算交易单位
     def calculate_unit(self,context):
-        value = context.portfolio.portfolio_value
-         # 计算波动的价格
-        dollar_volatility = g.dollars_per_share*(self.N)[-1]
+        value = context.portfolio.total_value
+        # 计算波动的价格
+        current_N = (self.N)[-1]
+        dollar_volatility = g.dollars_per_share*current_N
         # 依本策略，计算买卖的单位
-        self.unit = value*0.01/dollar_volatility
+        new_unit = value*0.01/dollar_volatility
+        unit = new_unit - self.portfolio_strategy_short
+        if(unit >=100):
+            self.unit = unit
+        else:
+            self.unit = 0
 
     #加仓数量
     def add_buy_count(self,count):
@@ -815,14 +874,9 @@ class StockInfo:
         self.portfolio_strategy_short = count
 
     def __str__(self):
-        log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
-        self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
+        # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
+        # self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
         return ""
-
-    #计算N天内最从高价回落最多%M
-    def get_ratio_between_last_hight(days = g.rblh_d,ratio = g.rblh_r):
-        # history
-        pass
 #股票管理类
 class StockManager():
     def __init__(self):
