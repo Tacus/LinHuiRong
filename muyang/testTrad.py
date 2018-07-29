@@ -851,7 +851,6 @@ class StockInfo:
         dollar_volatility = g.dollars_per_share*current_N
         # 依本策略，计算买卖的单位
         new_unit = value*0.01/dollar_volatility
-        print(value,dollar_volatility,new_unit,self.portfolio_strategy_short)
         unit = new_unit - self.portfolio_strategy_short
         if(unit >=100):
             self.unit = unit
@@ -874,7 +873,7 @@ class StockInfo:
     def set_buy_count(self,count):
         self.portfolio_strategy_short = count
 
-    def __str__(self):   
+    def __str__(self):
         # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
         # self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
         return ""
