@@ -738,8 +738,6 @@ class StockInfo:
 
     def start_process(self,context):
         self.calculate_unit(context)
-        if(self.unit == 0):
-            return
         #短时系统操作（买入，加仓，止损，清仓）
         current_data = get_current_data()
         current_price = current_data[self.code].last_price
@@ -757,9 +755,9 @@ class StockInfo:
             order_info = self.try_market_out(current_price)
             if(order_info != None):
                 return order_info
-            order_info = self.try_market_stop_profit(current_price)
-            if(order_info != None):
-                return order_info
+            # order_info = self.try_market_stop_profit(current_price)
+            # if(order_info != None):
+            #     return order_info
 
         return order_info
     #6
@@ -770,6 +768,8 @@ class StockInfo:
     #暂时只考虑一个系统运行情况
     def try_market_in(self,current_price, cash):
        #短时系统操作是否可以入市
+        if(self.unit == 0):
+            return
         has_break_max = self.has_break_max(current_price,self.system_high_short)
         if(not has_break_max):
             return
@@ -791,6 +791,8 @@ class StockInfo:
     # 输入：当前价格-float, 现金-float, 天数-int
     # 输出：none
     def try_market_add(self,current_price, cash):
+        if(self.unit == 0):
+            return
         break_price = self.break_price_short
         # 每上涨0.5N，加仓一个单元
         if current_price < self.next_add_price: 
@@ -826,7 +828,7 @@ class StockInfo:
     def try_market_stop_profit(self,current_price):
         # Function for leaving the market
         if(self.position_day >=15 and (self.break_price_short - self.mark_in_price)/self.mark_in_price <0.2):
-            print "-%s交易日未满足涨幅20,入场价：%s,当前价:%s"%(self.position_day,self.mark_in_price,self.break_price_short)
+            print "%s交易日未满足涨幅20,入场价：%s,当前价:%s"%(self.position_day,self.mark_in_price,self.break_price_short)
             return order(self.code, -self.portfolio_strategy_short)
 
     #9
