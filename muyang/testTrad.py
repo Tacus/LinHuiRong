@@ -723,6 +723,7 @@ class StockInfo:
             # 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
             current_N = (True_Range + (g.number_days-1)*(self.N)[-1])/g.number_days
             (self.N).append(current_N)
+            del self.N[0]
     #是否突破新高
     def has_break_max(self,close,max_price):
         if(close > max_price):
@@ -758,6 +759,7 @@ class StockInfo:
             # order_info = self.try_market_stop_profit(current_price)
             # if(order_info != None):
             #     return order_info
+            self.set_appropriate_out_price(current_price)
 
         return order_info
     #6
@@ -845,6 +847,12 @@ class StockInfo:
             order_info = order(self.code, - self.portfolio_strategy_short)
             print "止损！当前价：%s,上次突破买入价：%s，N:%s,position:%s"%(current_price,break_price,self.N[-1],self.portfolio_strategy_short)
             return order_info
+
+     #更新止损价格
+    def set_appropriate_out_price(self,current_price):
+        # Function for leaving the market
+        self.next_out_price = max(self.next_out_price,current_price - 2*self.N[-1])
+
     #计算交易单位
     def calculate_unit(self,context):
         value = context.portfolio.total_value
