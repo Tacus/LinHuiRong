@@ -38,7 +38,7 @@ def initialize(context):
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
 
-    g.debug_stocks = ["300323.XSHE"]
+    g.debug_stocks = ["601155.XSHG"]
     # g.debug_stocks = None
     g.stock_pool = []
     g.position_pool = {}
@@ -776,8 +776,8 @@ class StockInfo:
         if(not has_break_max):
             return
         num_of_shares = cash/current_price
-        if num_of_shares < self.unit:
-            return
+        # if num_of_shares < self.unit:
+        #     return
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
             order_info = order(self.code, int(self.unit))
             # self.portfolio_strategy_short += int(self.unit)
@@ -793,15 +793,15 @@ class StockInfo:
     # 输入：当前价格-float, 现金-float, 天数-int
     # 输出：none
     def try_market_add(self,current_price, cash):
-        if(self.unit == 0):
-            return
+        # if(self.unit == 0):
+        #     return
         break_price = self.break_price_short
         # 每上涨0.5N，加仓一个单元
         if current_price < self.next_add_price: 
             return
         num_of_shares = cash/current_price
-        if num_of_shares < self.unit: 
-            return
+        # if num_of_shares < self.unit: 
+        #     return
         order_info = order(self.code, int(self.unit))
         # self.portfolio_strategy_short += int(self.unit)
         self.break_price_short = current_price
