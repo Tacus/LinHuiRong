@@ -738,6 +738,8 @@ class StockInfo:
             return False
 
     def start_process(self,context):
+        if(len(self.N) == 0):
+            return
         self.calculate_unit(context)
         #短时系统操作（买入，加仓，止损，清仓）
         current_data = get_current_data()
@@ -860,12 +862,12 @@ class StockInfo:
         current_N = (self.N)[-1]
         dollar_volatility = g.dollars_per_share*current_N
         # 依本策略，计算买卖的单位
-        new_unit = value*0.01/dollar_volatility
-        unit = new_unit - self.portfolio_strategy_short
-        if(unit >=100):
-            self.unit = unit
-        else:
-            self.unit = 0
+        self.unit = value*0.01/dollar_volatility
+        # unit = new_unit - self.portfolio_strategy_short
+        # if(unit >=100):
+        #     self.unit = unit
+        # else:
+        #     self.unit = 0
 
     #加仓数量
     def add_buy_count(self,count):
