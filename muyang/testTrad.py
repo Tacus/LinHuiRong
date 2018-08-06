@@ -38,7 +38,7 @@ def initialize(context):
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
 
-    g.debug_stocks = ["601155.XSHG"]
+    g.debug_stocks = ["300323.XSHE"]
     # g.debug_stocks = None
     g.stock_pool = []
     g.position_pool = {}
@@ -784,7 +784,7 @@ class StockInfo:
             order_info = order(self.code, int(self.unit))
             # self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
-            self.next_add_price = current_price + 0.5*self.N[-1]
+            self.next_add_price = current_price + self.N[-1]
             self.next_out_price = current_price - 2*self.N[-1]
             self.mark_in_price = current_price
 
@@ -807,7 +807,7 @@ class StockInfo:
         order_info = order(self.code, int(self.unit))
         # self.portfolio_strategy_short += int(self.unit)
         self.break_price_short = current_price
-        self.next_add_price = current_price + 0.5*self.N[-1]
+        self.next_add_price = current_price + self.N[-1]
         self.next_out_price = current_price - 2*self.N[-1]
         print "加仓！当前价：%s,上次突破买入价：%s，N:%s,unit:%s,position:%s"%(current_price,break_price,self.N[-1],self.unit,self.portfolio_strategy_short)
         return order_info
