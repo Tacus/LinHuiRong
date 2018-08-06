@@ -63,7 +63,7 @@ for i in range(0, len(df)):
         cur_item = dic[cur_dict_pos]
         cur_dict_pos +=1
     action_date = datetime.datetime.strptime(cur_item['time'][:10],"%Y-%m-%d").date()
-    print(action_date,curtTime)
+    print(cur_dict_pos,curtTime,action_date)
     if(action_date == curtTime):
         if(cur_item["action"] == 'open'):
             isPosition = True
