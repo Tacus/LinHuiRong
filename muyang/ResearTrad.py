@@ -80,8 +80,10 @@ for i in range(0, len(df)):
         current_N = (True_Range + (20-1)*(N)[-1])/20
         (N).append(current_N)
         out_price = high_price - 2*current_N
+        
         if(not isPosition or (isPosition and out_price > cur_max_out_price)):
             cur_max_out_price = out_price
+        print(curtTime,out_price,low_price)
         out_price_2Atr_list.append(cur_max_out_price)
     
     trade_price = cur_max_out_price
@@ -90,7 +92,7 @@ for i in range(0, len(df)):
             isPosition = True
             last_N = N[-1]
             price = cur_item["price"] - 2*last_N
-            print(curtTime,cur_item["price"],cur_close_price)
+            
             trade_price = price
         else:
             isPosition = False
