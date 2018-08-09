@@ -43,7 +43,6 @@ def initialize(context):
 
     #M日涨幅要求--
 
-
     g.debug_stocks = ["300323.XSHE"]
     # g.debug_stocks = None
     g.stock_pool = []
@@ -837,7 +836,7 @@ class StockInfo:
     #15交易日涨幅小于20%退出
     def try_market_stop_profit(self,current_price):
         # Function for leaving the market
-        if(self.position_day >=15 and (self.break_price_short - self.mark_in_price)/self.mark_in_price <0.2):
+        if(self.position_day >=15 and (current_price - self.mark_in_price)/self.mark_in_price <0.2):
             print "%s交易日未满足涨幅20,入场价：%s,当前价:%s"%(self.position_day,self.mark_in_price,self.break_price_short)
             return order(self.code, -self.portfolio_strategy_short)
 

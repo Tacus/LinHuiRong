@@ -48,6 +48,7 @@ for i in range(0, len(df)):
         continue
     high_price = df['high'][i]
     low_price = df['low'][i]
+    cur_close_price = df['close'][i]
     index = i
     if(i == 0):
         index = 0
@@ -58,6 +59,7 @@ for i in range(0, len(df)):
     h_c = high_price-last_close
     c_l = last_close-low_price
     curtTime = dtseries[i].date()
+    # print(high_price,low_price,cur_close_price,last_close,curtTime)
     while cur_dict_pos < len(dic) and curtTime >= datetime.datetime.strptime(dic[cur_dict_pos]['time'][:10],"%Y-%m-%d").date():
         cur_item = dic[cur_dict_pos]
         cur_dict_pos +=1
@@ -69,7 +71,7 @@ for i in range(0, len(df)):
     if(len(lst) < 19):
         lst.append(True_Range)
         out_price_2Atr_list.append(float("Nan"))
-        out_price_2N_list.append(last_close)
+        out_price_2N_list.append(cur_close_price)
         continue
     else:
         if(len(N) == 0):
@@ -81,18 +83,23 @@ for i in range(0, len(df)):
         if(not isPosition or (isPosition and out_price > cur_max_out_price)):
             cur_max_out_price = out_price
         out_price_2Atr_list.append(cur_max_out_price)
-        
+    
+    trade_price = cur_max_out_price
     if(action_date == curtTime):
         if(cur_item["action"] == 'open'):
             isPosition = True
             last_N = N[-1]
             price = cur_item["price"] - 2*last_N
-            out_price_2N_list.append(price)
+            print(curtTime,cur_item["price"],cur_close_price)
+            trade_price = price
         else:
             isPosition = False
-            out_price_2N_list.append(last_close)
+
     else:
-        out_price_2N_list.append(last_close)
+        if(isPosition):
+            trade_price = out_price_2N_list[-1]
+    
+    out_price_2N_list.append(trade_price)
 
 
 
@@ -121,9 +128,9 @@ h = list(df['high'].values)
 l = list(df['low'].values)
 c = list(df['close'].values)
 for i,j,k in order_buy_list:
-    ax1.annotate(k,xy=(j,c[j]-0.1),xytext=(j,c[j]-0.3),arrowprops=dict(facecolor='red',shrink=0.2),horizontalalignment='left',verticalalignment='top')
+    ax1.annotate(k,xy=(j,c[j]-0.1),xytext=(j,c[j]-0.3),arrowprops=dict(facecolor='black',shrink=0.2),horizontalalignment='left',verticalalignment='top')
 for i,j,k in order_sell_list:
-    ax1.annotate(k,xy=(j,c[j]+0.1),xytext=(j,c[j]+0.3),arrowprops=dict(facecolor='green',shrink=0.2),horizontalalignment='left',verticalalignment='top')
+    ax1.annotate(k,xy=(j,c[j]+0.1),xytext=(j,c[j]+0.3),arrowprops=dict(facecolor='black',shrink=0.2),horizontalalignment='left',verticalalignment='top')
 
 # ax1.xaxis.set_major_formatter(mdate.DateFormatter('%Y-%m-%d'))
 # plt.xticks(pd.date_range(start_date,end_date),rotation=90)
