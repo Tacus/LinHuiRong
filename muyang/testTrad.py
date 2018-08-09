@@ -38,6 +38,12 @@ def initialize(context):
     #个股涨幅计算自然日区间
     g.stock_rangeDays = 250 #250
 
+    #加仓系数 例如：1N/0.5N
+    g.add_ratio = 1
+
+    #M日涨幅要求--
+
+
     g.debug_stocks = ["300323.XSHE"]
     # g.debug_stocks = None
     g.stock_pool = []
@@ -758,9 +764,9 @@ class StockInfo:
             order_info = self.try_market_out(current_price)
             if(order_info != None):
                 return order_info
-            # order_info = self.try_market_stop_profit(current_price)
-            # if(order_info != None):
-            #     return order_info
+            order_info = self.try_market_stop_profit(current_price)
+            if(order_info != None):
+                return order_info
             self.set_appropriate_out_price(current_price)
 
         return order_info
@@ -784,7 +790,7 @@ class StockInfo:
             order_info = order(self.code, int(self.unit))
             # self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
-            self.next_add_price = current_price + self.N[-1]
+            self.next_add_price = current_price + g.add_ratio * self.N[-1]
             self.next_out_price = current_price - 2*self.N[-1]
             self.mark_in_price = current_price
 
@@ -807,7 +813,7 @@ class StockInfo:
         order_info = order(self.code, int(self.unit))
         # self.portfolio_strategy_short += int(self.unit)
         self.break_price_short = current_price
-        self.next_add_price = current_price + self.N[-1]
+        self.next_add_price = current_price + g.add_ratio * self.N[-1]
         self.next_out_price = current_price - 2*self.N[-1]
         print "加仓！当前价：%s,上次突破买入价：%s，N:%s,unit:%s,position:%s"%(current_price,break_price,self.N[-1],self.unit,self.portfolio_strategy_short)
         return order_info
@@ -824,7 +830,7 @@ class StockInfo:
         # print min(price['close'])
         if self.portfolio_strategy_short > 0:
             # self.portfolio_strategy_short = 0
-            order_info = order(self.code, -self.portfolio_strategy_short)
+            order_info = order(self.code, - self.portfolio_strategy_short)
             print "离场！当前价：%s,最低价：%s，position:%s"%(current_price,self.system_low_short,self.portfolio_strategy_short)
             return order_info
 
