@@ -83,7 +83,7 @@ for i in range(0, len(df)):
         
         if(not isPosition or (isPosition and out_price > cur_max_out_price)):
             cur_max_out_price = out_price
-        print(curtTime,out_price,low_price)
+        print(curtTime,cur_max_out_price,high_price,current_N,low_price)
         out_price_2Atr_list.append(cur_max_out_price)
     
     trade_price = cur_max_out_price

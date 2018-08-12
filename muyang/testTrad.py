@@ -720,9 +720,9 @@ class StockInfo:
                     (self.N).append(current_N)
         else:
             price = attribute_history(self.code, 2, '1d',('high','low','close'))
-            h_l = price['high'][0]-price['low'][0]
-            h_c = price['high'][0]-price['close'][1]
-            c_l = price['close'][1]-price['low'][0]
+            h_l = price['high'][1]-price['low'][1]
+            h_c = price['high'][1]-price['close'][0]
+            c_l = price['close'][1]-price['low'][1]
             # Calculate the True Range
             True_Range = max(h_l, h_c, c_l)
             # 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
