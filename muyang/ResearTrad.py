@@ -76,10 +76,10 @@ for i in range(0, len(df)):
     else:
         if(len(N) == 0):
             current_N = np.mean(lst)
-            (N).append(current_N)
-        current_N = (True_Range + (20-1)*(N)[-1])/20
-        (N).append(current_N)
+        else:
+            current_N = (True_Range + (20-1)*(N)[-1])/20
         out_price = high_price - 2*current_N
+        (N).append(current_N)
         
         if(not isPosition or (isPosition and out_price > cur_max_out_price)):
             cur_max_out_price = out_price
