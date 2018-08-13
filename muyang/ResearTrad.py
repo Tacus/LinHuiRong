@@ -92,7 +92,7 @@ for i in range(0, len(df)):
             isPosition = True
             last_N = N[-1]
             price = cur_item["price"] - 2*last_N
-            
+            print(curtTime,cur_item["price"],cur_close_price)
             trade_price = price
         else:
             isPosition = False
