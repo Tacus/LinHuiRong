@@ -41,7 +41,9 @@ def initialize(context):
     #加仓系数 例如：1N/0.5N
     g.add_ratio = 1
 
-    #M日涨幅要求--
+    #M日涨幅要求--20日涨幅20%
+    g.increase_period = 20
+    g.increase_ratio = 0.2
 
     g.debug_stocks = ["300323.XSHE"]
     # g.debug_stocks = None
@@ -673,6 +675,10 @@ class StockInfo:
         self.market_cap = 0
         self.portfolio_strategy_short = 0
         self.position_day = 0
+        self.tight_out = True
+
+        # 2N初始止损价
+        self.n_out_price = 0
 
     #每日更新当前数据信息
     def run_daily(self,context):
@@ -715,8 +721,8 @@ class StockInfo:
                 else:
                     if(len(self.N) == 0):
                         current_N = np.mean(lst)
-                        (self.N).append(current_N)
-                    current_N = (True_Range + (g.number_days-1)*(self.N)[-1])/g.number_days
+                    else:
+                        current_N = (True_Range + (g.number_days-1)*(self.N)[-1])/g.number_days
                     (self.N).append(current_N)
         else:
             price = attribute_history(self.code, 2, '1d',('high','low','close'))
@@ -790,7 +796,13 @@ class StockInfo:
             # self.portfolio_strategy_short += int(self.unit)
             self.break_price_short = current_price
             self.next_add_price = current_price + g.add_ratio * self.N[-1]
-            self.next_out_price = current_price - 2*self.N[-1]
+            self.n_out_price = current_price - 2*self.N[-1]
+            p_out_price = current_price - current_price*0.07
+            self.next_out_price = max(self.n_out_price,p_out_price)
+            min_price = min(self.n_out_price,p_out_price)
+            if (not self.tight_out and min_price > self.system_low_short):
+                self.next_out_price = min(self.system_low_short,min_price)
+
             self.mark_in_price = current_price
 
             print "开仓！当前价：%s,最高价：%s,N:%s"%(current_price,self.system_high_short,self.N[-1])
@@ -813,7 +825,10 @@ class StockInfo:
         # self.portfolio_strategy_short += int(self.unit)
         self.break_price_short = current_price
         self.next_add_price = current_price + g.add_ratio * self.N[-1]
-        self.next_out_price = current_price - 2*self.N[-1]
+        self.n_out_price = current_price - 2*self.N[-1]
+        p_out_price = current_price - current_price*0.07
+
+        self.next_out_price = max(self.n_out_price,p_out_price)
         print "加仓！当前价：%s,上次突破买入价：%s，N:%s,unit:%s,position:%s"%(current_price,break_price,self.N[-1],self.unit,self.portfolio_strategy_short)
         return order_info
     #8
@@ -836,10 +851,12 @@ class StockInfo:
     #15交易日涨幅小于20%退出
     def try_market_stop_profit(self,current_price):
         # Function for leaving the market
-        if(self.position_day >=15 and (current_price - self.mark_in_price)/self.mark_in_price <0.2):
+        increase_ratio = (current_price - self.mark_in_price)/self.mark_in_price
+        if(self.position_day >= g.increase_period and increase_ratio < g.increase_ratio):
             print "%s交易日未满足涨幅20,入场价：%s,当前价:%s"%(self.position_day,self.mark_in_price,self.break_price_short)
-            return order(self.code, -self.portfolio_strategy_short)
-
+            return order(self.code, - self.portfolio_strategy_short)
+        else if(self.position_day >= g.increase_period):
+            self.tight_out = False
     #9
     # 止损函数
     # 输入：当前价格-float
@@ -849,8 +866,6 @@ class StockInfo:
         break_price = self.break_price_short
         # If the price has decreased by 2N, then clear all position
         if current_price < self.next_out_price:
-            # print break_price - 2*(g.N)[-1]
-            # self.portfolio_strategy_short = 0  
             order_info = order(self.code, - self.portfolio_strategy_short)
             print "止损！当前价：%s,上次突破买入价：%s，N:%s,position:%s"%(current_price,break_price,self.N[-1],self.portfolio_strategy_short)
             return order_info
@@ -858,7 +873,9 @@ class StockInfo:
      #更新止损价格
     def set_appropriate_out_price(self,current_price):
         # Function for leaving the market
-        self.next_out_price = max(self.next_out_price,current_price - 2*self.N[-1])
+        if(self.tight_out):
+            self.next_out_price = max(self.next_out_price,current_price - 2*self.N[-1])
+        # else:
 
     #计算交易单位
     def calculate_unit(self,context):
@@ -868,11 +885,6 @@ class StockInfo:
         dollar_volatility = g.dollars_per_share*current_N
         # 依本策略，计算买卖的单位
         self.unit = value*0.01/dollar_volatility
-        # unit = new_unit - self.portfolio_strategy_short
-        # if(unit >=100):
-        #     self.unit = unit
-        # else:
-        #     self.unit = 0
 
     #加仓数量
     def add_buy_count(self,count):
