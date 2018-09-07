@@ -72,7 +72,7 @@ def before_trading_start(context):
 def handle_data(context, data):
 
     for _,stock_info in g.position_pool.items():
-        order = stock_info.start_process(context)
+        order = stock_info.update(context)
 
         if order != None and order.filled  > 0 and order.is_buy :
             stock_info.add_buy_count( order.filled)
@@ -83,7 +83,7 @@ def handle_data(context, data):
                 del g.position_pool[stock_info.code]
 
     for single in g.stock_pool:
-        order = single.start_process(context)
+        order = single.update(context)
         if order != None and order.filled  > 0 and order.is_buy :
             single.set_buy_count( order.filled)
             g.stock_pool.remove(single)
@@ -681,6 +681,7 @@ class StockInfo:
 
         # 2N初始止损价
         self.n_out_price = 0
+        self.rs_data = StockRSData(self.code)
 
     #每日更新当前数据信息
     def run_daily(self,context):
@@ -750,13 +751,19 @@ class StockInfo:
         else:
             return False
 
-    def start_process(self,context):
+    def update(self,context):
         if(len(self.N) == 0):
             return
         self.calculate_unit(context)
         #短时系统操作（买入，加仓，止损，清仓）
         current_data = get_current_data()
         current_price = current_data[self.code].last_price
+
+        #获取上证指数
+        sh_df = get_price("000001.XSHG",end_date = context.current_dt,frequency = "minute",fields="close",count=1)
+
+        #更新rs数据
+        self.rs_data.update(current_price,sh_df.close[0])
         cash = context.portfolio.cash
         order_info = None
         if(self.portfolio_strategy_short == 0):
