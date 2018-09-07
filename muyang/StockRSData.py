@@ -8,11 +8,18 @@ class StockRSData(BaseClass):
 		self.security_code = code
 		self.current_se_price = 0
 		self.current_sh_price = 0
+		self.rs = []
 
-	def update_daily(self):
+	def update_daily(self,):
 		pass
 
 	def update(self,curt_se_price,curt_sh_price):
 		self.current_se_price = curt_se_price
 		self.current_sh_price = curt_sh_price
+		self.current_rs_value = curt_se_price/curt_sh_price
+
 		print(self.tag,self.current_sh_price,self.current_se_price)
+
+
+	def is_rs_valid():
+
