@@ -9,7 +9,7 @@ import jqdata
 import numpy as np
 import pandas as pd
 import math
-
+from StockRSData import *
 from sqlalchemy import or_
 from jy_sw_industry_code import *
 
@@ -665,6 +665,7 @@ class StockInfo:
     def update_info(self,price_info,eps_info):
         self.update_price_info(price_info)
         self.update_eps_info(eps_info)
+        self.rs_data = StockRSData(self.code)
 
     #初始化
     def _init_data(self):
@@ -681,7 +682,7 @@ class StockInfo:
 
         # 2N初始止损价
         self.n_out_price = 0
-        self.rs_data = StockRSData(self.code)
+        
 
     #每日更新当前数据信息
     def run_daily(self,context):

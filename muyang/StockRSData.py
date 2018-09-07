@@ -1,4 +1,4 @@
-import BaseClass
+from BaseClass import *
 class StockRSData(BaseClass):
 	def __init__(self,code):
 		super(StockRSData,self).__init__()
