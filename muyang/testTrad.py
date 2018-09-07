@@ -13,6 +13,8 @@ from StockRSData import *
 from sqlalchemy import or_
 from jy_sw_industry_code import *
 
+import sys
+print sys.version
 jydf = jy.run_query(query(jy.SecuMain))
 
 index_list = ['OpenPrice','ClosePrice','InnerCode']
