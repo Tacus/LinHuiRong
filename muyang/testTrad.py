@@ -653,7 +653,7 @@ class StockInfo:
             security_closes.set_value(len(security_closes),closes[index])
             trade_date = indexs[index]
             # trade_date = trade_date + timedelta(1)
-            shdf = get_price("000001.SHXS",end_date = trade_date,frequency = 1,unit="1d",fields = "close")
+            shdf = get_price("000001.SHXS",end_date = trade_date,count = 1,frequency="1d",fields = "close")
             sh_closes.set_value(len(sh_closes),shdf.close[index])
             pass
         self.rs_data.set_rs_date(security_closes/sh_closes)

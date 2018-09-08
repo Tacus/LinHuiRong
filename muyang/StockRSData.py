@@ -1,8 +1,8 @@
 from BaseClass import *
 class StockRSData(BaseClass):
-	def __init__(self,code):
+	def __init__(self,code,period):
 		super(StockRSData,self).__init__()
-		self.init_data(code)
+		self.init_data(code,period)
 
 	def init_data(self,code,period):
 		self.security_code = code
