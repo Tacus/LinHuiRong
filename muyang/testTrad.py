@@ -55,6 +55,9 @@ def initialize(context):
     # run_weekly(weekly_fun,"open")
     #计算N天内最从高价回落最多%M
 
+    #计算rs的时间周期
+    g.rs_period = 120
+
 #设定每周第一个交易日为该周内账户总市值
 def weekly_fun(context):
     date = context.current_dt
@@ -636,6 +639,24 @@ class StockInfo:
     def __init__(self, price_info,eps_info):
         self._init_data()
         self.update_info(price_info,eps_info)
+        self.init_rs_data()
+
+    #更新rs数据
+    def init_rs_data(self):
+        self.rs_data = StockRSData(self.code,g.rs_period)
+        security_closes = pd.Series()
+        sh_closes = pd.Series()
+        df = attribute_history(self.code,count = g.rs_period,unit="1d",fields = "close",skip_paused = True)
+        indexs = df.index
+        closes = df.close
+        for index in xrange(len(df)):
+            security_closes.set_value(len(security_closes),closes[index])
+            trade_date = indexs[index]
+            # trade_date = trade_date + timedelta(1)
+            shdf = get_price("000001.SHXS",end_date = trade_date,frequency = 1,unit="1d",fields = "close")
+            sh_closes.set_value(len(sh_closes),shdf.close[index])
+            pass
+        self.rs_data.set_rs_date(security_closes/sh_closes)
     #更新价格
     def update_price_info(self,price_info):
         if(price_info == None):
@@ -667,7 +688,6 @@ class StockInfo:
     def update_info(self,price_info,eps_info):
         self.update_price_info(price_info)
         self.update_eps_info(eps_info)
-        self.rs_data = StockRSData(self.code)
 
     #初始化
     def _init_data(self):
@@ -678,10 +698,8 @@ class StockInfo:
         self.market_cap = 0
         self.portfolio_strategy_short = 0
         self.position_day = 0
-
         #是否紧止损
         self.tight_out = True
-
         # 2N初始止损价
         self.n_out_price = 0
         
@@ -696,6 +714,13 @@ class StockInfo:
         df = attribute_history(self.code,g.long_in_date,"1d",("high","low"))
         self.system_high_long = max(df.high)
         self.system_low_long = min(df.low)
+
+        #获取今日该股最高价与上证最高价求得rs（未来函数）
+        df = get_price(["000001.XSHG",self.code],end_date = context.current_dt,count = 1,frequency = "1d",fields = ("high"))
+        sh_close = df.high["000001.XSHG"][0]
+        se_close = df.high[self.code][0]
+        self.rs_data.update_daily(sh_close,se_close)
+
         self.calculate_n()
         if(self.portfolio_strategy_short!=0):
             self.position_day += 1
@@ -762,11 +787,12 @@ class StockInfo:
         current_data = get_current_data()
         current_price = current_data[self.code].last_price
 
+        current_dt = context.current_dt
         #获取上证指数
-        sh_df = get_price("000001.XSHG",end_date = context.current_dt,frequency = "minute",fields="close",count=1)
+        sh_df = get_price("000001.XSHG",end_date = current_dt,frequency = "minute",fields="close",count=1)
 
         #更新rs数据
-        self.rs_data.update(current_price,sh_df.close[0])
+        self.rs_data.update(current_price,sh_df.close[0],current_dt)
         cash = context.portfolio.cash
         order_info = None
         if(self.portfolio_strategy_short == 0):
@@ -798,11 +824,16 @@ class StockInfo:
         if(self.unit == 0):
             return
         has_break_max = self.has_break_max(current_price,self.system_high_short)
-        if(not has_break_max):
+        rs_satisfied = self.rs_data.can_be_trade()
+
+        print("是否触发海龟交易信号：%s,rs是否满足条件：%s"%(has_break_max,rs_satisfied))
+
+        if(not has_break_max or not rs_satisfied):
             return
         num_of_shares = cash/current_price
         # if num_of_shares < self.unit:
         #     return
+
         if self.portfolio_strategy_short < int(g.unit_limit*self.unit):
             order_info = order(self.code, int(self.unit))
             # self.portfolio_strategy_short += int(self.unit)
@@ -822,6 +853,8 @@ class StockInfo:
         # if(self.unit == 0):
         #     return
         break_price = self.break_price_short
+        # rs_satisfied = self.rs_data.can_be_trade()
+
         # 每上涨0.5N，加仓一个单元
         if current_price < self.next_add_price: 
             return
