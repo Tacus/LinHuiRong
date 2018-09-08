@@ -654,8 +654,7 @@ class StockInfo:
             trade_date = indexs[index]
             # trade_date = trade_date + timedelta(1)
             shdf = get_price("000001.XSHG",end_date = trade_date,count = 1,frequency="1d",fields = "close")
-            sh_closes.set_value(len(sh_closes),shdf.close[index])
-            pass
+            sh_closes.set_value(len(sh_closes),shdf.close[0])
         self.rs_data.set_rs_date(security_closes/sh_closes)
     #更新价格
     def update_price_info(self,price_info):
