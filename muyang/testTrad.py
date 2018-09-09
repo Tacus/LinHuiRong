@@ -56,7 +56,7 @@ def initialize(context):
     #计算N天内最从高价回落最多%M
 
     #计算rs的时间周期
-    g.rs_period = 120
+    g.rs_period = 250
 
 #设定每周第一个交易日为该周内账户总市值
 def weekly_fun(context):
