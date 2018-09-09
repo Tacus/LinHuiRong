@@ -47,8 +47,8 @@ def initialize(context):
     g.increase_period = 20
     g.increase_ratio = 0.2
 
-    g.debug_stocks = ["300323.XSHE"]
-    # g.debug_stocks = None
+    # g.debug_stocks = ["300323.XSHE"]
+    g.debug_stocks = None
     g.stock_pool = []
     g.position_pool = {}
     init_turtle_data()
