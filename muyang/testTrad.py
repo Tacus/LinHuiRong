@@ -13,8 +13,8 @@ from StockRSData import *
 from sqlalchemy import or_
 from jy_sw_industry_code import *
 
-import sys
-print sys.version
+# import sys
+# print sys.version
 jydf = jy.run_query(query(jy.SecuMain))
 
 index_list = ['OpenPrice','ClosePrice','InnerCode']
@@ -718,7 +718,7 @@ class StockInfo:
         df = get_price(["000001.XSHG",self.code],end_date = context.current_dt,count = 1,frequency = "1d",fields = ("high"))
         sh_close = df.high["000001.XSHG"][0]
         se_close = df.high[self.code][0]
-        self.rs_data.update_daily(sh_close,se_close)
+        self.rs_data.update_daily(se_close,sh_close)
 
         self.calculate_n()
         if(self.portfolio_strategy_short!=0):
@@ -825,7 +825,7 @@ class StockInfo:
         has_break_max = self.has_break_max(current_price,self.system_high_short)
         rs_satisfied = self.rs_data.can_be_trade()
 
-        print("是否触发海龟交易信号：%s,rs是否满足条件：%s"%(has_break_max,rs_satisfied))
+        # print("是否触发海龟交易信号：%s,rs是否满足条件：%s"%(has_break_max,rs_satisfied))
 
         if(not has_break_max or not rs_satisfied):
             return

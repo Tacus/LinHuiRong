@@ -32,7 +32,7 @@ class StockRSData(BaseClass):
 		else:
 			self.can_betrade = False
 			self.pass_day = 0
-		print(self.tag,self.pass_day,self.can_betrade,self.rs_satisfied)
+		# print(self.tag,self.rs_satisfied,self.pass_day,self.can_betrade,self.rs_satisfied)
 
 	#if time is 14:59,record it
 	def update(self,curt_se_price,curt_sh_price,date):
@@ -43,7 +43,10 @@ class StockRSData(BaseClass):
 		if(date.hour == 14 and 59 == date.minute):
 			self.rs.append(self.today_rs_max)
 		self.check_rs_satisfied()
+		# self.update_trade_state()
 
+
+	# def update_trade_state(self):
 
 	def check_rs_satisfied(self):
 		total = len(self.rs)
@@ -52,10 +55,12 @@ class StockRSData(BaseClass):
 			rs_max = max(self.rs[-self.period:])
 		else:
 			rs_max = max(self.rs)
-
 		if(self.today_rs_max >= rs_max and self.current_se_price < max_close):
 			self.rs_satisfied = True
+			self.pass_day = 1
+			self.can_betrade = True
+			# print(self.tag,self.rs_satisfied,self.pass_day,self.can_betrade)
 		else:
 			self.rs_satisfied = False
 	def can_be_trade(self):
-		return self.can_be_trade
+		return self.can_betrade
