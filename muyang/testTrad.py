@@ -198,13 +198,13 @@ def get_valid_stocks(context,securitys = None):
             #     log.info("%s的最近两个季度eps增长率：%s:%s%%,%s:%s%%，最近年度eps增长率：%s%%,%s%%,%s%%"%(x["code"],
             #   x["eps_date2"],x["eps_ratio2"],x["eps_date"], x["eps_ratio"],year_eps_ratio3,year_eps_ratio2,x["year_eps_ratio"]))
                 # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,\最近年度eps增长率：%s%%,%s%%,%s%%"%(stock,
-                # price_stock["security_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
+                # price_stock["display_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
                 # eps_stock["eps_ratio"],year_eps_ratio3,year_eps_ratio2,eps_stock["year_eps_ratio"]))
                 stInfo = get_stock_info(price_stock,eps_stock)
                 if(stInfo != None):
                     result.append(stInfo)
                 # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%"%(stock,
-                # price_stock["security_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
+                # price_stock["display_name"],price_stock["index"],price_stock["value"], price_stock["weight"] ,eps_stock["eps_ratio2"], 
                 # eps_stock["eps_ratio"]))
     gr_index2 = get_growth_rate("000016.XSHG")
     gr_index8 = get_growth_rate("399333.XSHE")
@@ -356,7 +356,7 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
     stocks = []
     data = get_current_data()
     for x in result:
-        # security_name = sw1mapdf.loc[x["secu"]]
+        # display_name = sw1mapdf.loc[x["secu"]]
         security = x["secu"]
         close = data[security].last_price
         security_avg1 = avg_1[security]
@@ -377,7 +377,7 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
             and close>max_close*0.7
             and stock_score >87):
  
-            # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s"%(x["secu"],security_name,index,x["value"],x["weight"] ) )
+            # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s"%(x["secu"],display_name,index,x["value"],x["weight"] ) )
             x["index"] = index
             index += 1
             fileter_securitys[x["secu"]] = x
@@ -386,8 +386,8 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
                 break
         
         # else:
-        #     security_name = "已退市"
-        # log.info("%s（%s）的排名为：%s,分数为：%s"%(x["secu"],security_name,index,x["value"] ) )
+        #     display_name = "已退市"
+        # log.info("%s（%s）的排名为：%s,分数为：%s"%(x["secu"],display_name,index,x["value"] ) )
         # index +=1
     # for i in arrange
     # (result)
@@ -481,18 +481,20 @@ def get_mighty_eps_stocks(context,securitys=None):
         # x["eps_ratio2"] = math.floor(ratio2*100)
         if(ratio<0.2 or ratio2 <0.2):
             continue
-        security_name = sw1mapdf[sw1mapdf["code"] == code]
-        security_name = security_name["security_name"][0]
+        display_name = sw1mapdf[sw1mapdf["code"] == code]
+        if(display_name.empty):
+            continue
+        display_name = display_name["display_name"][0]
         result.append({"code":code,
         "eps_ratio":round(ratio*100,1),
         "eps_ratio2":round(ratio2*100,1),
         "eps_date":dt_str,
         "eps_date2":dt_str2,
         "market_cap":market_cap,
-        "security_name":security_name
+        "display_name":display_name
         })
         # result.append({"code":code,"eps_ratio":round(ratio*100,1),"eps_ratio2":round(ratio2*100,1)})
-        # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,eps增长率：%s%%"%(x["secu"],x["security_name"],x["index"],x["value"],math.floor(x["weight"]) ,math.floor(ratio*100)) )
+        # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,eps增长率：%s%%"%(x["secu"],x["display_name"],x["index"],x["value"],math.floor(x["weight"]) ,math.floor(ratio*100)) )
         # last_year_dt = get_last_year_date(current_dt,year_count=1)
         # single_df = get_fundamentals(single_query,statDate=last_year_dt)
         # if(single_df.empty):
@@ -564,7 +566,7 @@ def get_mighty_eps_stocks(context,securitys=None):
         # print(single_df)
     # # result = sorted(result,key  = lambda d: d["index"])
     # for x in result:
-    #     # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,eps1增长率：%s%%,eps2增长率：%s%%"%(x["secu"], x["security_name"],x["index"],x["value"],math.floor(x["weight"]) ,x["eps_ratio"],x["eps_ratio2"]) )
+    #     # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,eps1增长率：%s%%,eps2增长率：%s%%"%(x["secu"], x["display_name"],x["index"],x["value"],math.floor(x["weight"]) ,x["eps_ratio"],x["eps_ratio2"]) )
     #     year_eps_ratio2 = "None"
     #     if x.has_key("year_eps_ratio2"):
     #       year_eps_ratio2 = x["year_eps_ratio2"]
@@ -671,8 +673,8 @@ class StockInfo:
             return
         if eps_info.has_key("eps_ratio2"):
            self.eps_ratio2 = eps_info["eps_ratio2"]
-        if eps_info.has_key("security_name"):
-           self.security_name = eps_info["security_name"]
+        if eps_info.has_key("display_name"):
+           self.display_name = eps_info["display_name"]
         if eps_info.has_key("eps_ratio"):
            self.eps_ratio = eps_info["eps_ratio"]
         if eps_info.has_key("market_cap"):
@@ -950,7 +952,7 @@ class StockInfo:
 
     def __str__(self):
         # log.info("%s（%s）的排名为：%s,总分数为：%s,个股分数为：%s,最近两个季度eps增长率：%s%%,%s%%,市值：%s"%(self.code,
-        # self.security_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
+        # self.display_name,self.index,self.value, self.weight ,self.eps_ratio2,self.eps_ratio,self.market_cap))
         return ""
 #股票管理类
 class StockManager():

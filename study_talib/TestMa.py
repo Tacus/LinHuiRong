@@ -29,7 +29,8 @@
 import pandas as pd
 
 
-
+df = pd.DataFrame()
+print(dir(df))
 a = [1,2,3]
 a = pd.Series(a)
 # print(dir(a))
