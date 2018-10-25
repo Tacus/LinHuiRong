@@ -1,4 +1,4 @@
-    
+
 from jqdata import jy
 from jqdata import *
 import pandas as pd
@@ -38,32 +38,38 @@ def get_sw_quote(code,end_date=None,count=None,start_date=None):
     df2.drop(['InnerCode','ID','UpdateTime','JSID'],axis=1,inplace=True)
     return df2.to_panel()
     
-    #股票做排序
+    #做排序
 def get_sw_industry_stocks(name,data,datetime):
-    codes = get_industries(name);
+    codes = get_industries(name).index;
     for i in range(len(codes)):
         industry_coce = codes[i]
         securities = get_industry_stocks(industry_coce)
-<<<<<<< HEAD
-        df = history(securities)
-=======
         panel = get_price(security = securities,end_date = datetime,count = 1,fields = ['pre_close','close'])
-        
->>>>>>> 7a4e1c662c0bc5627d8121ead564451c2ef2b60b
-        for security in securities:
-            last_security_price = data[security].pre_close
+        df_preclose = panel["pre_close"]
+        df_close = panel["close"]
+        df = (df_close - df_preclose)/df_preclose
+        print(df.columns,type(df.columns))
+        # for security in securities:
+        #     last_security_price = data[security].pre_close
             
+def initialize(context):
+    run_daily(get_lastday_increase)
+
+def get_lastday_increase(context):
+    print("get_lastday_increase")
 
 def handle_data(context,data):
-    get_sw_industry_stocks("sw_l1",data)
-    get_sw_industry_stocks("sw_l2")
+    current_dt = context.current_dt
+    end_date = current_dt - timedelta(days = 1)
+    get_sw_industry_stocks("sw_l1",data,end_date)
+    get_sw_industry_stocks("sw_l2",data,end_date)
     # code = get_industries(name='sw_l1').index[:5]
     # print(code)
-    df = get_sw_quote(code,end_date=context.current_dt,count=1)
+    # df = get_sw_quote(code,end_date=context.current_dt,count=1)
 #   print(df.major_axis)
 #   print(df.minor_axis)
 #   df.to_frame(True)
 #   print(df.AShareTotalMV)
 #   print(df)
-    
+
 
