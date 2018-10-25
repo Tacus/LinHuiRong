@@ -54,7 +54,7 @@ def handle_data(context,data):
     get_sw_industry_stocks("sw_l2")
     # code = get_industries(name='sw_l1').index[:5]
     # print(code)
-    df = get_sw_quote(code,end_date=contet,count=1)
+    df = get_sw_quote(code,end_date=context.current_dt,count=1)
 #   print(df.major_axis)
 #   print(df.minor_axis)
 #   df.to_frame(True)
