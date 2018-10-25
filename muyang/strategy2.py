@@ -44,7 +44,7 @@ def get_sw_industry_stocks(name,data):
     for i in range(len(codes)):
         industry_coce = codes[i]
         securities = get_industry_stocks(industry_coce)
-        
+        df = history(securities)
         for security in securities:
             last_security_price = data[security].pre_close
             
