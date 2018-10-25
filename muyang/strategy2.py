@@ -39,11 +39,12 @@ def get_sw_quote(code,end_date=None,count=None,start_date=None):
     return df2.to_panel()
     
     #股票做排序
-def get_sw_industry_stocks(name,data):
+def get_sw_industry_stocks(name,data,datetime):
     codes = get_industries(name);
     for i in range(len(codes)):
         industry_coce = codes[i]
         securities = get_industry_stocks(industry_coce)
+        panel = get_price(security = securities,end_date = datetime,count = 1,fields = ['pre_close','close'])
         
         for security in securities:
             last_security_price = data[security].pre_close
