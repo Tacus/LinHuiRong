@@ -52,12 +52,12 @@ def get_sw_industry_stocks(name,datetime,count):
         df = (df_close - df_preclose)/df_preclose
         stock_infos = list()
         for security in securities:
-            increase = df[security][-1]
+            increase = round(df[security][-1],2)
             stock_close = df_close[security]
             series_rs = stock_close/industry_close
-            ema_rs = tb.EMA(np.array(series_rs),39)
+            ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],2)
             volume = df_volume[security][-1]
-            cur_rs = series_rs[-1]
+            cur_rs = round(series_rs[-1],2)
             close_price = stock_close[-1]
             stock_info = StockInfo(security,industry_code,name)
             stock_info.init_data(increase,close_price,stock_close,cur_rs,ema_rs,volume)
@@ -74,14 +74,17 @@ def get_sw_industry_stocks(name,datetime,count):
             if(cur_rs>ema_rs):
                 pick_count+=1
                 new_industry.add_stockinfo(stock_info)
-                new_industry.cal_emars(series_market_closes)
+        check_rs = new_industry.check_ema_rs(series_market_closes)
+        if(check_rs):
+            g.new_industries.append(new_industry)
 
 def initialize(context):
-    run_daily(get_lastday_increase)
+    g.new_industries = list()
+    run_daily(daily_function)
 
 def get_mightlymarket_closes(datetime,count):
     codes = ["000001.XSHG","399006.XSHE","399005.XSHE"]
-    panel = get_price(codes,end_date = datetime,count = count,filter = ["close,pre_close"])
+    panel = get_price(codes,end_date = datetime,count = count,fields = ["close","pre_close"])
     df = panel["close"]
     pre_df = panel["pre_close"]
     series_increase = (df.iloc[-1] - pre_df.iloc[-1])/pre_df.iloc[-1]
@@ -93,8 +96,9 @@ def get_mightlymarket_closes(datetime,count):
             max_code = code
     return df[max_code]
 
-def get_lastday_increase(context):
+def daily_function(context):
     print("get_lastday_increase",context.current_dt)
+    del g.new_industries[:]
     pass
 
 def handle_data(context,data):
@@ -102,6 +106,10 @@ def handle_data(context,data):
     end_date = current_dt - timedelta(days = 1)
     get_sw_industry_stocks("sw_l1",end_date,60)
     get_sw_industry_stocks("sw_l2",end_date,60)
+    for industry in g.new_industries:
+        for stock_info in industry.stock_infos:
+            print(stock_info)
+            pass
 
 class StockInfo:
     def __init__(self,security,industry,swl):
@@ -114,7 +122,7 @@ class StockInfo:
         self.close_price = close_price
         self.close_prices = close_prices
         self.cur_rs = cur_rs
-        self.ema_rs = ema_rs[-1]
+        self.ema_rs = ema_rs
         self.volume = volume
 
     def __str__(self):
@@ -124,24 +132,29 @@ class CustomIndustry:
     def __init__(self,industry):
         self.industry = industry
         self.stock_infos = list()
-        self.cur_rs = 0
     def init_data(self):
         pass
 
-    def cal_emars(self,series_market_closes):
-        self.cal_value()
-
+    def check_ema_rs(self,series_market_closes):
+        value,values = self.cal_value()
+        ema_rs = tb.EMA(np.array(values/series_market_closes),39)
+        cur_rs = value/series_market_closes[-1]
+        return cur_rs > ema_rs[-1]
 
     def add_stockinfo(self,stock_info):
         self.stock_infos.append(stock_info)
     def cal_value(self):
-        for stock_info in self.stock_infos:
+        value = 0
+        values = 0
+        for index in range(len(self.stock_infos)):
+            stock_info = self.stock_infos[index]
             value += stock_info.close_price
-            if(not self.values):
+            if(index == 0):
                 values = stock_info.close_prices
             else:
-                self.values += stock_info.close_prices
+                values += stock_info.close_prices
         value = round(value/len(self.stock_infos),2)
         values = values/len(self.stock_infos)
+        return value,values
     def __str__(self):
         return "CustomIndustry"
