@@ -74,9 +74,10 @@ def get_sw_industry_stocks(name,datetime,count):
             if(cur_rs>ema_rs):
                 pick_count+=1
                 new_industry.add_stockinfo(stock_info)
-        check_rs = new_industry.check_ema_rs(series_market_closes)
-        if(check_rs):
-            g.new_industries.append(new_industry)
+        if(pick_count>0):
+            check_rs = new_industry.check_ema_rs(series_market_closes)
+            if(check_rs):
+                g.new_industries.append(new_industry)
 
 def initialize(context):
     g.new_industries = list()
@@ -109,7 +110,7 @@ def handle_data(context,data):
     for industry in g.new_industries:
         for stock_info in industry.stock_infos:
             print(stock_info)
-            pass
+            passStockInfo
 
 class StockInfo:
     def __init__(self,security,industry,swl):
