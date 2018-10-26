@@ -38,7 +38,7 @@ def get_sw_industry_stocks(name,datetime,count):
     codes = get_industries(name).index;
     panel_industry = get_sw_quote(codes,end_date=datetime,count=count)
     industry_closes = panel_industry.ClosePrice
-    get_market_closes(datetime,count)
+    series_market_closes = get_mightlymarket_closes(datetime,count)
     for i in range(len(codes)):
         industry_code = codes[i]
         if(not industry_code in industry_closes.columns):
@@ -74,13 +74,24 @@ def get_sw_industry_stocks(name,datetime,count):
             if(cur_rs>ema_rs):
                 pick_count+=1
                 new_industry.add_stockinfo(stock_info)
+                new_industry.set_market_closes(series_market_closes)
 
 def initialize(context):
     run_daily(get_lastday_increase)
 
-def get_market_closes(datetime,count):
+def get_mightlymarket_closes(datetime,count):
     codes = ["000001.XSHG","399006.XSHE","399005.XSHE"]
-    get_price(codes,end_date = datetime,count = count,filter = ["close"])
+    panel = get_price(codes,end_date = datetime,count = count,filter = ["close,pre_close"])
+    df = panel["close"]
+    pre_df = panel["pre_close"]
+    series_increase = (df.iloc[-1] - pre_df.iloc[-1])/pre_df.iloc[-1]
+    max_value = -1
+    max_code = None
+    for code in codes:
+        if(series_increase[code]>max_value):
+            max_value = series_increase[code]
+            max_code = code
+    return df[max_code]
 
 def get_lastday_increase(context):
     print("get_lastday_increase",context.current_dt)
@@ -114,6 +125,9 @@ class CustomIndustry:
         self.value = 0
     def init_data(self):
         pass
+    def set_market_closes(series_market_closes):
+        
+        
     def add_stockinfo(self,stock_info):
         self.stock_infos.append(stock_info)
     def get_value(self):
