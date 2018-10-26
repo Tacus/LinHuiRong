@@ -59,8 +59,8 @@ def get_sw_industry_stocks(name,datetime,count):
             volume = df_volume[security][-1]
             cur_rs = series_rs[-1]
             close_price = stock_close[-1]
-            stock_info = StockInfo(security,close_price,industry_code,name)
-            stock_info.init_data(increase,cur_rs,ema_rs,volume)
+            stock_info = StockInfo(security,industry_code,name)
+            stock_info.init_data(increase,close_price,stock_close,cur_rs,ema_rs,volume)
             stock_infos.append(stock_info)
             # stock_info
         stock_infos = sorted(stock_infos,key = lambda data: data.increase,reverse = True)
@@ -74,7 +74,7 @@ def get_sw_industry_stocks(name,datetime,count):
             if(cur_rs>ema_rs):
                 pick_count+=1
                 new_industry.add_stockinfo(stock_info)
-                new_industry.set_market_closes(series_market_closes)
+                new_industry.cal_emars(series_market_closes)
 
 def initialize(context):
     run_daily(get_lastday_increase)
@@ -109,12 +109,14 @@ class StockInfo:
         self.industry = industry
         self.swl = swl
         pass
-    def init_data(self,increase,close_price,cur_rs,ema_rs,volume):
+    def init_data(self,increase,close_price,close_prices,cur_rs,ema_rs,volume):
         self.increase = increase
         self.close_price = close_price
+        self.close_prices = close_prices
         self.cur_rs = cur_rs
         self.ema_rs = ema_rs[-1]
         self.volume = volume
+
     def __str__(self):
         value = "name:%s,increase:%s,cur_rs:%s,ema_rs:%s"%(self.security,self.increase,self.cur_rs,self.ema_rs)
         return value
@@ -122,19 +124,24 @@ class CustomIndustry:
     def __init__(self,industry):
         self.industry = industry
         self.stock_infos = list()
-        self.value = 0
+        self.cur_rs = 0
     def init_data(self):
         pass
-    def set_market_closes(series_market_closes):
-        
-        
+
+    def cal_emars(self,series_market_closes):
+        self.cal_value()
+
+
     def add_stockinfo(self,stock_info):
         self.stock_infos.append(stock_info)
-    def get_value(self):
-        if(self.value != 0):
-            return self.value
+    def cal_value(self):
         for stock_info in self.stock_infos:
-            self.value += stock_info.close_price
-        self.value = round(self.value/len(self.stock_infos),2)
+            value += stock_info.close_price
+            if(not self.values):
+                values = stock_info.close_prices
+            else:
+                self.values += stock_info.close_prices
+        value = round(value/len(self.stock_infos),2)
+        values = values/len(self.stock_infos)
     def __str__(self):
         return "CustomIndustry"
