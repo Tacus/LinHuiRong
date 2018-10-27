@@ -17,7 +17,7 @@ from jy_sw_industry_code import *
 # print sys.version
 jydf = jy.run_query(query(jy.SecuMain))
 
-index_list = ['OpenPrice','ClosePrice','InnerCode']
+index_list = ['PrevClosePrice','ClosePrice','InnerCode']
 
 
 def initialize(context):
@@ -228,7 +228,7 @@ def get_stock_info(price_info,eps_info):
 
 def common_get_weight(list):
     size = len(list)
-    for index in range(len(list)):
+    for index in range(size):
         x = list[index]    
         # value =  (index+1)*(99/(1-size))+100-(99/(1-size))
         value = index*(99.0/(1-size))+100
@@ -251,17 +251,16 @@ def get_ratioandsort(secus,start_date,end_date):
 
     securitys = list()
     currentSecuCode = None
-    closePrice_open = None
+    closePrice_pre = None
     closePrice_close = None
     while len(df) > 0 :
         dflist = list(df.itertuples(index=False))
         for array in dflist :
             if(array[2] != currentSecuCode):
-
                 if(currentSecuCode != None):
-                    ratio = (closePrice_close - closePrice_open)/closePrice_open 
+                    ratio = (closePrice_close - closePrice_pre)/closePrice_pre 
                     securitys.append({"secu":series.loc(currentSecuCode),"value":ratio})
-                closePrice_open = array[0]
+                closePrice_pre = array[0]
                 
                 currentSecuCode = array[2]
 
@@ -321,10 +320,10 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
     # resultDf = ((retDictclose - retDictopen)/retDictopen)
     # print( (retDictclose["close"]- retDictopen["open"])/retDictopen["open"])
     
-    result = get_price(secuData, None, context.current_dt, str(g.stock_rangeDays)+"d", ["open","close"], False, "pre", 1)
+    result = get_price(secuData, None, context.current_dt, str(g.stock_rangeDays)+"d", ["pre_close","close"], False, "pre", 1)
     # result.fillnan(0)
     securitys = list()
-    resultRatio = (result["close"] - result["open"])/result["open"]
+    resultRatio = (result["close"] - result["pre_close"])/result["pre_close"]
     # resultDelta = result["close"] - result["open"]
     # print(resultRatio)
     for x in secuData:
