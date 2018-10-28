@@ -13,15 +13,15 @@ import re
 # print output
 
 df1 = pd.DataFrame(np.random.randn(3,3),columns = list("ABC"))
-# print(list(df1.itertuples(index =False)))
-# print(type(list(df1.itertuples(index =False))[0]))
 print(df1)
 df2 = pd.DataFrame(list(df1.itertuples(index=False)),columns = list("ABg"))
 df2["A"] = list("123")
 print(df2)
-df = df1.merge(df2,on = "B",copy = False)
-df = df.to_panel()
+df = df1.append(df2)
+# df = df1.merge(df2,on = "B",copy = False)
 print(df)
+# df = df.to_panel()
+# print(df)
 # def get_oversea_excelpath(filePath,file_name):
 #     match_name = file_name+r"_(.*)\..*"
 #     for p, d, fs in os.walk(filePath):

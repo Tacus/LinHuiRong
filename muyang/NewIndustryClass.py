@@ -1,4 +1,7 @@
+#coding: utf-8
 from BaseClass import *
+import talib as tb
+import numpy as np
 class StockInfo(BaseClass):
     def __init__(self,security,industry,industry_name,swl):
         self.security = security
@@ -25,25 +28,29 @@ class CustomIndustry:
         pass
 
     def check_ema_rs(self,series_market_closes):
-        value,values = self.cal_value()
-        ema_rs = tb.EMA(np.array(values/series_market_closes),39)
-        cur_rs = value/series_market_closes[-1]
-        return cur_rs > ema_rs[-1]
+        values = self.cal_value()
+        series_rs = values/series_market_closes
+        ema_rs = tb.EMA(np.array(series_rs),39)
+        cur_rs = series_rs[-1]
+        return cur_rs > ema_rs[-1],ema_rs
 
     def add_stockinfo(self,stock_info):
         self.stock_infos.append(stock_info)
     def cal_value(self):
-        value = 0
+        # value = 0
         values = 0
         for index in range(len(self.stock_infos)):
             stock_info = self.stock_infos[index]
-            value += stock_info.close_price
+            # value += stock_info.close_price
             if(index == 0):
                 values = stock_info.close_prices
             else:
                 values += stock_info.close_prices
-        value = round(value/len(self.stock_infos),2)
+        # value = round(value/len(self.stock_infos),4)
         values = values/len(self.stock_infos)
-        return value,values
+        return values
     def __str__(self):
-        return "CustomIndustry"
+        text = ""
+        for stock_info in self.stock_infos:
+            text = text + str(stock_info)+";"
+        return "CustomIndustry:"+text
