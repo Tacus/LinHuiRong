@@ -11,7 +11,7 @@ import pandas as pd
 import math
 from StockRSData import *
 from sqlalchemy import or_
-from jy_sw_industry_code import *
+import Utils
 
 # import sys
 # print sys.version
@@ -20,6 +20,9 @@ jydf = jy.run_query(query(jy.SecuMain))
 index_list = ['PrevClosePrice','ClosePrice','InnerCode']
 
 
+
+SW1 = get_industries("sw_l1").index.tolist();
+SW2 = get_industries("sw_l2").index.tolist();
 def initialize(context):
     # g为全局变量
     g.sw1_weight = 1
@@ -179,11 +182,11 @@ def get_valid_stocks(context,securitys = None):
             if(stInfo != None):
                 result.append(stInfo)
         return result
-    cur_date = context.current_dt
-    g.all_trade_days = jqdata.get_trade_days(end_date = cur_date,count = 300)
+    end_date = context.current_dt - timedelta(days = 1)
+    g.all_trade_days = jqdata.get_trade_days(end_date = end_date,count = 300)
     start_date = g.all_trade_days[-g.industry_rangeDays]
-    sortedList_level1 = get_ratioandsort(SW1,start_date,cur_date)
-    sortedList_level2 = get_ratioandsort(SW2,start_date,cur_date)
+    sortedList_level1 = Utils.get_ratioandsort(SW1,end_date,g.industry_rangeDays)
+    sortedList_level2 = Utils.get_ratioandsort(SW2,end_date,g.industry_rangeDays)
     mighty_price_list = get_mighty_price_stocks(context,sortedList_level1,sortedList_level2)
     mighty_eps_list = get_mighty_eps_stocks(context,g.debug_stocks)
     for stock,price_stock in mighty_price_list.items():
@@ -233,45 +236,17 @@ def common_get_weight(list):
         # value =  (index+1)*(99/(1-size))+100-(99/(1-size))
         value = index*(99.0/(1-size))+100
         x["weight"] = round(value,1)
-        # print("common_get_weight:",x["secu"],index,size,value)
 
-def get_ratioandsort(secus,start_date,end_date):
-    # 获取行业指数
-    jydf = jy.run_query(query(jy.SecuMain).filter(jy.SecuMain.SecuCode.in_(secus)))
-    result=jydf['InnerCode']
-    # print(jydf)
-    df = jy.run_query(query(jy.QT_SYWGIndexQuote).filter(jy.QT_SYWGIndexQuote.InnerCode.in_( result),\
-                                                  jy.QT_SYWGIndexQuote.TradingDay>=start_date,\
-                                                         jy.QT_SYWGIndexQuote.TradingDay<=end_date
-                                                      ))
-    series = pd.Series(jydf["SecuCode"].tolist(),index = result)
-    # print(dir(result))
-    df = df[index_list]
-    offset = 0
-
+def get_ratioandsort(secus,end_date,count):
+    industry_panel = get_sw_quote(secus,end_date,count)
+    industry_close = industry_panel.ClosePrice
     securitys = list()
-    currentSecuCode = None
-    closePrice_pre = None
-    closePrice_close = None
-    while len(df) > 0 :
-        dflist = list(df.itertuples(index=False))
-        for array in dflist :
-            if(array[2] != currentSecuCode):
-                if(currentSecuCode != None):
-                    ratio = (closePrice_close - closePrice_pre)/closePrice_pre 
-                    securitys.append({"secu":series.loc(currentSecuCode),"value":ratio})
-                closePrice_pre = array[0]
-                
-                currentSecuCode = array[2]
 
-            closePrice_close = array[1]
-
-        offset += len(df)
-        df = jy.run_query(query(jy.QT_SYWGIndexQuote).filter(jy.QT_SYWGIndexQuote.InnerCode.in_( result),\
-                                                  jy.QT_SYWGIndexQuote.TradingDay>=start_date,\
-                                                         jy.QT_SYWGIndexQuote.TradingDay<=end_date
-                                                      ).offset(offset))
-        df = df[index_list]
+    for industry_code in secus:
+        pre_close = industry_close[industry_code][0]
+        close = industry_close[industry_code][-1]
+        ratio = close - pre_close / pre_close
+        securitys.append({"secu":pre_close,"value":ratio})
         
     result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
     common_get_weight(result)
@@ -321,7 +296,6 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
     # print( (retDictclose["close"]- retDictopen["open"])/retDictopen["open"])
     
     result = get_price(secuData, None, context.current_dt, str(g.stock_rangeDays)+"d", ["pre_close","close"], False, "pre", 1)
-    # result.fillnan(0)
     securitys = list()
     resultRatio = (result["close"] - result["pre_close"])/result["pre_close"]
     # resultDelta = result["close"] - result["open"]
@@ -347,9 +321,6 @@ def get_mighty_price_stocks(context,sw1dict,sw2dict):
         x["value"] = round(weight,1)
     result = sorted(securitys,key  = lambda d: d["value"],reverse = True)
     num =int( math.floor(len(result)*0.2))
-    # (result)
-    # result = result[:num]
-    # print("num:",num)
     index = 1
     fileter_securitys = {}
     stocks = []
