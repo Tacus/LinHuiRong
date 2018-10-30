@@ -31,7 +31,7 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
         industry_code = codes[i]
         if(not industry_code in industry_closes.columns):
             continue
-        industry_close = industry_closes[industry_code]
+        # industry_close = industry_closes[industry_code]
         industry_name = industry_names[industry_code][-1]
         securities = get_industry_stocks(industry_code)
      
@@ -41,8 +41,8 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
                 continue
             increase = round(series_increase[security],4)
             stock_close = df_close[security]
-            series_rs = stock_close/industry_close
-
+            series_rs = stock_close/series_market_closes
+            # print(series_rs)
             ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
             volume = df_volume[security][-1]
             cur_rs = round(series_rs[-1],4)
@@ -59,13 +59,12 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
             ema_rs = stock_info.ema_rs
             if(pick_count >= 5):
                 break
-            print(stock_info)
+            # print(stock_info)
             if(cur_rs>ema_rs):
                 pick_count+=1
                 new_industry.add_stockinfo(stock_info)
         if(pick_count>0):
             check_rs,ema_rs = new_industry.check_ema_rs(series_market_closes)
-            record(price = ema_rs[-1])
             if(check_rs):
                 g.new_industries.append(new_industry)
 
@@ -103,7 +102,7 @@ def daily_function(context):
     history_data = get_price(security = securities,end_date = end_date,count = 240,fields = ['close','volume'])
 
     get_sw_industry_stocks("sw_l1",end_date,240,history_data,current_data)
-    get_sw_industry_stocks("sw_l2",end_date,240,history_data,current_data)
+    # get_sw_industry_stocks("sw_l2",end_date,240,history_data,current_data)
 
     for industry in g.new_industries:
         for stock_info in industry.stock_infos:
