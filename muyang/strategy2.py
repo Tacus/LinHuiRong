@@ -64,7 +64,7 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
                 pick_count+=1
                 new_industry.add_stockinfo(stock_info)
         if(pick_count>0):
-            check_rs,ema_rs = new_industry.check_ema_rs(series_market_closes)
+            check_rs = new_industry.check_ema_rs(series_market_closes)
             if(check_rs):
                 g.new_industries.append(new_industry)
 
@@ -84,13 +84,40 @@ def get_mightlymarket_closes(datetime,count):
     return df_close[max_code]
 
 def handle_data(context,data):
+    count = 240
+    end_date = context.current_dt - timedelta(days = 1)
+    securities = list()
     for industry in g.new_industries:
         for stock_info in industry.stock_infos:
+            securities.append(stock_info.security)
+    history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume'])
+    series_market_closes = get_mightlymarket_closes(end_date,count)
+    df_close = history_data["close"]
+    df_volume = history_data["volume"]
+    series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
+    for industry in g.new_industries:
+        for stock_info in industry.stock_infos:
+            security = stock_info.security
+            if(data[security].paused):
+                continue
+            increase = round(series_increase[security],4)
+            stock_close = df_close[security]
+            series_rs = stock_close/series_market_closes
+            ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
+            volume = df_volume[security][-1]
+            cur_rs = round(series_rs[-1],4)
+            close_price = stock_close[-1]
+            stock_info.set_data(increase,close_price,stock_close,cur_rs,ema_rs,volume)
             print(stock_info)
+        industry.check_ema_rs(series_market_closes)
+        cur_rs = round(industry.cur_rs*100000,2)
+        ema_rs = round(industry.cur_emars*100000,2)
+        record(RS = cur_rs,EMARS = ema_rs)
+        break;
     pass
 def initialize(context):
     g.new_industries = list()
-    run_monthly(daily_function,monthday = 1,time = "before_open")
+    run_monthly(monthly_function,monthday = 1,time = "before_open")
 
 def monthly_function(context):
     del g.new_industries[:]

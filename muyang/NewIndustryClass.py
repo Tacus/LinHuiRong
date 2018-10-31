@@ -31,8 +31,10 @@ class CustomIndustry:
         values = self.cal_value()
         series_rs = values/series_market_closes
         ema_rs = tb.EMA(np.array(series_rs),39)
-        cur_rs = series_rs[-1]
-        return cur_rs > ema_rs[-1],ema_rs
+        # print(values,ema_rs,series_rs)
+        self.cur_rs = series_rs[-1]
+        self.cur_emars = ema_rs[-1]
+        return self.cur_rs > self.cur_emars
 
     def add_stockinfo(self,stock_info):
         self.stock_infos.append(stock_info)
