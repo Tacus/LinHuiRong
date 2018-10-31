@@ -9,7 +9,7 @@ class StockInfo(BaseClass):
         self.swl = swl
         self.industry_name = industry_name
         pass
-    def init_data(self,increase,close_price,close_prices,cur_rs,ema_rs,volume):
+    def set_data(self,increase,close_price,close_prices,cur_rs,ema_rs,volume):
         self.increase = increase
         self.close_price = close_price
         self.close_prices = close_prices

@@ -48,7 +48,7 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
             cur_rs = round(series_rs[-1],4)
             close_price = stock_close[-1]
             stock_info = StockInfo(security,industry_code,industry_name,name)
-            stock_info.init_data(increase,close_price,stock_close,cur_rs,ema_rs,volume)
+            stock_info.set_data(increase,close_price,stock_close,cur_rs,ema_rs,volume)
             stock_infos.append(stock_info)
             # stock_info
         stock_infos = sorted(stock_infos,key = lambda data: data.increase,reverse = True)
@@ -84,12 +84,15 @@ def get_mightlymarket_closes(datetime,count):
     return df_close[max_code]
 
 def handle_data(context,data):
+    for industry in g.new_industries:
+        for stock_info in industry.stock_infos:
+            print(stock_info)
     pass
 def initialize(context):
     g.new_industries = list()
-    run_daily(daily_function)
+    run_monthly(daily_function,monthday = 1,time = "before_open")
 
-def daily_function(context):
+def monthly_function(context):
     del g.new_industries[:]
     current_dt = context.current_dt
     end_date = current_dt - timedelta(days = 1)
@@ -100,10 +103,6 @@ def daily_function(context):
     securities_df = securities_df[securities_df["start_date"] <= start_date]
     securities = securities_df.index.tolist()
     history_data = get_price(security = securities,end_date = end_date,count = 240,fields = ['close','volume'])
-
     get_sw_industry_stocks("sw_l1",end_date,240,history_data,current_data)
     # get_sw_industry_stocks("sw_l2",end_date,240,history_data,current_data)
-
-    for industry in g.new_industries:
-        for stock_info in industry.stock_infos:
-            print(stock_info)
+    
