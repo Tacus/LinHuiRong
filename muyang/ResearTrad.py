@@ -134,10 +134,6 @@ for i,j,k in order_buy_list:
 for i,j,k in order_sell_list:
     ax1.annotate(k,xy=(j,c[j]+0.1),xytext=(j,c[j]+0.3),arrowprops=dict(facecolor='black',shrink=0.2),horizontalalignment='left',verticalalignment='top')
 
-# ax1.xaxis.set_major_formatter(mdate.DateFormatter('%Y-%m-%d'))
-# plt.xticks(pd.date_range(start_date,end_date),rotation=90)
-# print(pd.date_range(start_date,end_date))
-# print(start_date,end_date)
 quotes = zip(t, o, h, l, c)
 df['ma10'] = pd.Series(talib.MAX(df['high'].values,20),index=df.index.values)
 df['ma10'].plot(ax=ax1, legend=False)
