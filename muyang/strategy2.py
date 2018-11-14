@@ -100,6 +100,7 @@ def handle_data(context,data):
             security = stock_info.security
             if(data[security].paused):
                 continue
+            security = "600588.XSHG"
             increase = round(series_increase[security],4)
             stock_close = df_close[security]
             series_rs = stock_close/series_market_closes
@@ -110,8 +111,8 @@ def handle_data(context,data):
             stock_info.set_data(increase,close_price,stock_close,cur_rs,ema_rs,volume)
             print(stock_info)
         industry.check_ema_rs(series_market_closes)
-        cur_rs = round(industry.cur_rs*100000,2)
-        ema_rs = round(industry.cur_emars*100000,2)
+        cur_rs = round(industry.cur_rs*10000,2)
+        ema_rs = round(industry.cur_emars*10000,2)
         record(RS = cur_rs,EMARS = ema_rs)
         break;
     pass
@@ -132,4 +133,6 @@ def monthly_function(context):
     history_data = get_price(security = securities,end_date = end_date,count = 240,fields = ['close','volume'])
     get_sw_industry_stocks("sw_l1",end_date,240,history_data,current_data)
     # get_sw_industry_stocks("sw_l2",end_date,240,history_data,current_data)
+    # for industry in g.new_industries:
+        
     
