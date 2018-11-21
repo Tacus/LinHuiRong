@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-
+#coding: utf-8
 import numpy
-
+import sys
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
-
+# import matplotlib.finance
+# import matplotlib.mpl_finance
 from mpl_finance import candlestick2_ohlc
 
 
@@ -94,3 +95,14 @@ def show_plots(title, date_tickers, o, h, l, c, v, operations, x1, x2, extra=[])
 
     plt.grid()
     plt.show()
+fig = plt.figure()
+# grid = plt.GridSpec(3, 1, hspace=0.5)
+# main_ax = plt.subplot(grid[0:2,0])
+# extra_ax = plt.subplot(grid[2,0], sharex=main_ax)
+# fig.subplots_adjust(bottom=0.2)
+# plt.grid()
+# ax1 = plt.subplot2grid((3, 3), (0, 0), colspan=3)
+# ax1.plot([1, 2], [1, 2])    # 画小图
+# ax1.set_title('ax1_title') 
+# plt.show()
+print(sys.platform)
