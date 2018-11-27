@@ -128,5 +128,5 @@ def monthly_function(context):
     securities = securities_df.index.tolist()
     history_data = get_price(security = securities,end_date = end_date,count = 240,fields = ['close','volume'])
     get_sw_industry_stocks("sw_l1",end_date,240,history_data,current_data)
-    # get_sw_industry_stocks("sw_l2",end_date,240,history_data,current_data)
+        
     
