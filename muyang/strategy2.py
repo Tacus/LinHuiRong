@@ -26,6 +26,7 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
     series_market_closes = get_mightlymarket_closes(datetime,count)
     df_close = history_data["close"]
     df_volume = history_data["volume"]
+    print(df_close)
     series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
     for i in range(len(codes)):
         industry_code = codes[i]
@@ -59,9 +60,10 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
             ema_rs = stock_info.ema_rs
             if(pick_count >= 5):
                 break
-            # print(stock_info)
+            
             if(cur_rs>ema_rs):
                 pick_count+=1
+                print(stock_info)
                 new_industry.add_stockinfo(stock_info)
         if(pick_count>0):
             check_rs = new_industry.check_ema_rs(series_market_closes)
@@ -108,13 +110,8 @@ def handle_data(context,data):
             cur_rs = round(series_rs[-1],4)
             close_price = stock_close[-1]
             stock_info.set_data(increase,close_price,stock_close,cur_rs,ema_rs,volume)
-            print(stock_info)
+            # print(stock_info)
         industry.check_ema_rs(series_market_closes)
-        cur_rs = round(industry.cur_rs*100000,2)
-        ema_rs = round(industry.cur_emars*100000,2)
-        record(RS = cur_rs,EMARS = ema_rs)
-        break;
-    pass
 def initialize(context):
     g.new_industries = list()
     run_monthly(monthly_function,monthday = 1,time = "before_open")

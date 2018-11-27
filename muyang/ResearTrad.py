@@ -120,7 +120,8 @@ order_sell_list=order_trans(sell_list)
 # print(order_buy_list,order_sell_list)
 #开始绘图
 plt.close()
-fig = plt.figure(figsize(100,50),dpi=800,frameon=True)
+# fig = plt.figure(figsize(100,50),dpi=800,frameon=True)
+fig = plt.figure(figsize(100,50))
 
 ax1=plt.subplot2grid((8,3),(0,0),rowspan=3,colspan=1)
 ax1.set_xlim(0,len(df))
