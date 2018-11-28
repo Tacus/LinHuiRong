@@ -65,10 +65,10 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
                 pick_count+=1
                 print(stock_info)
                 new_industry.add_stockinfo(stock_info)
-        if(pick_count>0):
-            check_rs = new_industry.check_ema_rs(series_market_closes)
-            if(check_rs):
-                g.new_industries.append(new_industry)
+        # if(pick_count>0):
+        #     check_rs = new_industry.check_ema_rs(series_market_closes)
+        #     if(check_rs):
+        #         g.new_industries.append(new_industry)
 
 
 
