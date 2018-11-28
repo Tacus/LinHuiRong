@@ -7,17 +7,6 @@ import Utils
 import talib as tb
 from NewIndustryClass import *
 
-# 初始化函数，设定要操作的股票、基准等等
-def initialize(context):
-    # 定义一个全局变量, 保存要操作的股票
-    # 000001(股票:平安银行)
-    g.security = '000001.XSHE'
-    # 设定沪深300作为基准
-    set_benchmark('000300.XSHG')
-    # 开启动态复权模式(真实价格)
-    set_option('use_real_price', True)
-
-    #做排序
 def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
     codes = get_industries(name).index;
     panel_industry = Utils.get_sw_quote(codes,end_date=datetime,count=count)
@@ -26,7 +15,6 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
     series_market_closes = get_mightlymarket_closes(datetime,count)
     df_close = history_data["close"]
     df_volume = history_data["volume"]
-    print(df_close)
     series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
     for i in range(len(codes)):
         industry_code = codes[i]
@@ -40,18 +28,32 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
         for security in securities:
             if(not security in series_increase or current_data[security].paused):
                 continue
-            increase = round(series_increase[security],4)
+
             stock_close = df_close[security]
             series_rs = stock_close/series_market_closes
-            # print(series_rs)
-            ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
+            cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
+            # increase = round(series_increase[security],4)
+
+            ref_ema_rs30 = series_rs[-30]
+            c30 = (cur_ema_rs - ref_ema_rs30)/ref_ema_rs30
+
+            ref_ema_rs60 = series_rs[-60]
+            c60 = (ref_ema_rs30 - ref_ema_rs60)/ref_ema_rs60
+            
+            ref_ema_rs90 = series_rs[-90]
+            c90 = (ref_ema_rs60 - ref_ema_rs90)/ref_ema_rs90
+
+            ref_ema_rs120 = series_rs[-120]
+            c120 = (ref_ema_rs90 - ref_ema_rs120)/ref_ema_rs120
+
+            stock_strength = ((1+c120*0.8)*(1+c90*0.8)*(1+c60*0.8)*(1+c30*1.6)-1)*100#计算个股强度
+
             volume = df_volume[security][-1]
             cur_rs = round(series_rs[-1],4)
             close_price = stock_close[-1]
             stock_info = StockInfo(security,industry_code,industry_name,name)
-            stock_info.set_data(increase,close_price,stock_close,cur_rs,ema_rs,volume)
+            stock_info.set_data(stock_strength,close_price,stock_close,cur_rs,cur_ema_rs,volume)
             stock_infos.append(stock_info)
-            # stock_info
         stock_infos = sorted(stock_infos,key = lambda data: data.increase,reverse = True)
         pick_count = 0
         new_industry = CustomIndustry(industry_code)
@@ -60,15 +62,14 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
             ema_rs = stock_info.ema_rs
             if(pick_count >= 5):
                 break
-            
             if(cur_rs>ema_rs):
                 pick_count+=1
                 print(stock_info)
                 new_industry.add_stockinfo(stock_info)
-        # if(pick_count>0):
-        #     check_rs = new_industry.check_ema_rs(series_market_closes)
-        #     if(check_rs):
-        #         g.new_industries.append(new_industry)
+
+        if(pick_count>0):
+            new_industry.check_ema_rs(series_market_closes)
+            g.new_industries.append(new_industry)
 
 
 
@@ -86,12 +87,14 @@ def get_mightlymarket_closes(datetime,count):
     return df_close[max_code]
 
 def handle_data(context,data):
-    count = 240
+    count = g.period
     end_date = context.current_dt - timedelta(days = 1)
     securities = list()
     for industry in g.new_industries:
         for stock_info in industry.stock_infos:
             securities.append(stock_info.security)
+    if(0 == len(securities)):
+        return
     history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume'])
     series_market_closes = get_mightlymarket_closes(end_date,count)
     df_close = history_data["close"]
@@ -102,17 +105,36 @@ def handle_data(context,data):
             security = stock_info.security
             if(data[security].paused):
                 continue
-            increase = round(series_increase[security],4)
             stock_close = df_close[security]
             series_rs = stock_close/series_market_closes
-            ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
+            cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
+
+            # increase = round(series_increase[security],4) #deprecate
+            ref_ema_rs30 = series_rs[-30]
+            c30 = (cur_ema_rs - ref_ema_rs30)/ref_ema_rs30
+
+            ref_ema_rs60 = series_rs[-60]
+            c60 = (ref_ema_rs30 - ref_ema_rs60)/ref_ema_rs60
+            
+            ref_ema_rs90 = series_rs[-90]
+            c90 = (ref_ema_rs60 - ref_ema_rs90)/ref_ema_rs90
+
+            ref_ema_rs120 = series_rs[-120]
+            c120 = (ref_ema_rs90 - ref_ema_rs120)/ref_ema_rs120
+
+            stock_strength = ((1+c120*0.8)*(1+c90*0.8)*(1+c60*0.8)*(1+c30*1.6)-1)*100
+
             volume = df_volume[security][-1]
             cur_rs = round(series_rs[-1],4)
             close_price = stock_close[-1]
-            stock_info.set_data(increase,close_price,stock_close,cur_rs,ema_rs,volume)
-            # print(stock_info)
-        industry.check_ema_rs(series_market_closes)
+
+            # stock_info.set_data(increase,close_price,stock_close,cur_rs,cur_ema_rs,volume)
+            stock_info.set_data(stock_strength,close_price,stock_close,cur_rs,cur_ema_rs,volume)
 def initialize(context):
+    set_benchmark('000300.XSHG')
+    # 开启动态复权模式(真实价格)
+    set_option('use_real_price', True)
+    g.period = 240
     g.new_industries = list()
     run_monthly(monthly_function,monthday = 1,time = "before_open")
 
@@ -126,7 +148,8 @@ def monthly_function(context):
     securities_df = get_all_securities()
     securities_df = securities_df[securities_df["start_date"] <= start_date]
     securities = securities_df.index.tolist()
-    history_data = get_price(security = securities,end_date = end_date,count = 240,fields = ['close','volume'])
-    get_sw_industry_stocks("sw_l1",end_date,240,history_data,current_data)
+    count = g.period
+    history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume'])
+    get_sw_industry_stocks("sw_l1",end_date,count,history_data,current_data)
         
     
