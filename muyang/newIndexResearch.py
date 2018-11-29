@@ -41,6 +41,7 @@ series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
 increase = round(series_increase,4)
 stock_close = df_close
 series_rs = stock_close/series_market_closes
+
 # print(stock_close,series_rs)
 
 ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
