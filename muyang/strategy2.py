@@ -71,8 +71,6 @@ def get_sw_industry_stocks(name,datetime,count,history_data,current_data):
             new_industry.check_ema_rs(series_market_closes)
             g.new_industries.append(new_industry)
 
-
-
 def get_mightlymarket_closes(datetime,count):
     codes = ["000001.XSHG","399006.XSHE","399005.XSHE"]
     panel = get_price(codes,end_date = datetime,count = count,fields = ["close"])
@@ -87,14 +85,28 @@ def get_mightlymarket_closes(datetime,count):
     return df_close[max_code]
 
 def handle_data(context,data):
+    
+    
+def initialize(context):
+    set_benchmark('000300.XSHG')
+    # 开启动态复权模式(真实价格)
+    set_option('use_real_price', True)
+    g.period = 240
+    g.first_run = True
+    g.new_industries = list()
+    run_monthly(monthly_function,monthday = 1,time = "before_open")
+    run_daily(daily_function,monthday = 1,time = "before_open")
+
+def daily_function(context):
+    if(g.first_run or 0 == len(g.new_industries)):
+        return
+    g.first_run = False
     count = g.period
     end_date = context.current_dt - timedelta(days = 1)
     securities = list()
     for industry in g.new_industries:
         for stock_info in industry.stock_infos:
             securities.append(stock_info.security)
-    if(0 == len(securities)):
-        return
     history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume'])
     series_market_closes = get_mightlymarket_closes(end_date,count)
     df_close = history_data["close"]
@@ -127,16 +139,8 @@ def handle_data(context,data):
             volume = df_volume[security][-1]
             cur_rs = round(series_rs[-1],4)
             close_price = stock_close[-1]
-
             # stock_info.set_data(increase,close_price,stock_close,cur_rs,cur_ema_rs,volume)
             stock_info.set_data(stock_strength,close_price,stock_close,cur_rs,cur_ema_rs,volume)
-def initialize(context):
-    set_benchmark('000300.XSHG')
-    # 开启动态复权模式(真实价格)
-    set_option('use_real_price', True)
-    g.period = 240
-    g.new_industries = list()
-    run_monthly(monthly_function,monthday = 1,time = "before_open")
 
 def monthly_function(context):
     del g.new_industries[:]
