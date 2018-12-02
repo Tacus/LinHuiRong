@@ -17,7 +17,10 @@ class StockRSData(BaseClass):
 		self.rs_satisfied = False
 		self.can_betrade = False
 
-	def set_rs_date(self,se_closes,sh_closes):
+	def set_rs(self,rs):
+		self.rs = rs
+
+	def set_rs_data(self,se_closes,sh_closes):
 		self.se_closes = se_closes.tolist()
 		self.sh_closes = sh_closes.tolist()
 		self.rs = (se_closes / sh_closes).tolist()

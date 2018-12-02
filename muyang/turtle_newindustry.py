@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import Utils
 import talib as tb
-from NewIndustryClass import *
+# from NewIndustryClass import *
 from StockRSData import *
 
 
@@ -134,7 +134,8 @@ class TurtleStrategy(BaseStrategy):
 		self.pick_stocks(context)
 
 	def daily_function(self,context):
-		if(self.first_run or 0 == len(self.new_industries)):
+		# if(self.first_run or 0 == len(self.new_industries)):
+		if(0 == len(self.new_industries)):
 			return
 		self.first_run = False
 		count = self.trading_period
@@ -144,26 +145,31 @@ class TurtleStrategy(BaseStrategy):
 			for stock_info in industry.stock_infos:
 				securities.append(stock_info.code)
 		history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume','high','low'])
+		current_data = get_current_data()
 		series_market_closes = get_mightlymarket_closes(end_date,count)
 		df_close = history_data["close"]
 		df_high = history_data["high"]
 		df_low = history_data["low"]
 		df_volume = history_data["volume"]
 		series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
+
+		#获取今日该股最高价与上证最高价求得rs（未来函数）
+		df = get_price("000001.XSHG",end_date = end_date,count = 1,frequency = "1d",fields = ("high"))
+		sh_close = df.high[0]
 		for industry in self.new_industries:
 			for stock_info in industry.stock_infos:
 				code = stock_info.code
-				if(data[code].paused):
+				if(current_data[code].paused):
 					continue
 				stock_closes = df_close[code]
 				stock_highs = df_high[code]
 				stock_lows = df_low[code]
-				self.calculate_rs(stock_info,series_market_closes,stock_lows,stock_highs,stock_closes)
+				self.calculate_rs(stock_info,series_market_closes,stock_lows,stock_highs,stock_closes,stock_closes[-1],sh_close)
 				self.calculate_n(stock_info,stock_lows,stock_highs,stock_closes)
 
 
 	#计算rs数据
-	def calculate_rs(self,stock_info,series_market_closes,stock_lows,stock_highs,stock_closes):
+	def calculate_rs(self,stock_info,series_market_closes,stock_lows,stock_highs,stock_closes,se_close,sh_close):
 		series_rs = stock_closes/series_market_closes
 		cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
 
@@ -182,7 +188,7 @@ class TurtleStrategy(BaseStrategy):
 
 		stock_strength = ((1+c120*0.8)*(1+c90*0.8)*(1+c60*0.8)*(1+c30*1.6)-1)*100
 
-		volume = df_volume[code][-1]
+		volume = 0
 		cur_rs = round(series_rs[-1],4)
 		close_price = stock_closes[-1]
 		# stock_info.set_data(increase,close_price,stock_closes,cur_rs,cur_ema_rs,volume)
@@ -192,7 +198,8 @@ class TurtleStrategy(BaseStrategy):
 		tq_longlowprice = min(stock_lows[-self.tq_longperiod:])
 		tq_shorthighprice = max(stock_highs[-self.tq_shortperiod:])
 		tq_shortlowprice = max(stock_lows[-self.tq_shortperiod:])
-		stock_info.daily_function(tq_longhighprice,tq_longlowprice,tq_shorthighprice,tq_shortlowprice)
+
+		stock_info.daily_function(tq_longhighprice,tq_longlowprice,tq_shorthighprice,tq_shortlowprice,se_close,sh_close)
 	#计算海龟系统N
 	def calculate_n(self,stock_info,stock_lows,stock_highs,stock_closes):
 		# 需要考虑停牌，上市交易天数过小,这时候是否需要参与交易
@@ -251,8 +258,11 @@ class TurtleStrategy(BaseStrategy):
 		sh_close = sh_df.close[0],
 		for industry in self.new_industries:
 			for stock_info in industry.stock_infos:
+				print("strategy:1111")
 				if(len(stock_info.N) == 0):
 					continue
+				print("strategy:start_trade")
+
 				order = stock_info.handle_data(context,current_data,sh_close)
 				if order != None and order.filled  > 0 and order.is_buy :
 					if(stock_info.portfolio_strategy_short != 0):
@@ -313,6 +323,7 @@ class TurtleStrategy(BaseStrategy):
 				security_name = current_data[security].name
 				stock_info = StockInfo(security,security_name,industry_code,industry_name)
 				stock_info.set_data(stock_strength,close_price,stock_close,cur_rs,cur_ema_rs,volume)
+				stock_info.init_rs_data(series_rs)
 				stock_infos.append(stock_info)
 			stock_infos = sorted(stock_infos,key = lambda data: data.increase,reverse = True)
 			pick_count = 0
@@ -324,7 +335,7 @@ class TurtleStrategy(BaseStrategy):
 					break
 				if(cur_rs>ema_rs):
 					pick_count+=1
-					print(stock_info)
+					# print(stock_info)
 					new_industry.add_stockinfo(stock_info)
 
 			if(pick_count>0):
@@ -351,32 +362,32 @@ class StockInfo(BaseClass):
 		#M日涨幅要求--20日涨幅20%
 		self.increase_period = 20
 
+		self.rs_period = 250
+
 		self.N = list()
-		pass
+
+		#更新rs数据
+	def init_rs_data(self,rs):
+	    self.rs_data = StockRSData(self.code,self.rs_period)
+	    self.rs_data.set_rs(rs)
 
 	def set_data(self,increase,close_price,close_prices,cur_rs,ema_rs,volume):
-	    self.increase = increase
-	    self.close_price = close_price
-	    self.close_prices = close_prices
-	    self.cur_rs = cur_rs
-	    self.ema_rs = ema_rs
-	    self.volume = volume
+		self.increase = increase
+		self.close_price = close_price
+		self.close_prices = close_prices
+		self.cur_rs = cur_rs
+		self.ema_rs = ema_rs
+		self.volume = volume
 
 
-	def daily_function(self,tq_longhighprice,tq_longlowprice,tq_shorthighprice,tq_shortlowprice):
+	def daily_function(self,tq_longhighprice,tq_longlowprice,tq_shorthighprice,tq_shortlowprice,se_close,sh_close):
 		#唐安奇通道
 		self.tq_longhighprice = tq_longhighprice
 		self.tq_longlowprice = tq_longlowprice
 		self.tq_shorthighprice = tq_shorthighprice
 		self.tq_shortlowprice = tq_shortlowprice
-
-		#获取今日该股最高价与上证最高价求得rs（未来函数）
-		df = get_price(["000001.XSHG",self.code],end_date = context.current_dt,count = 1,frequency = "1d",fields = ("high"))
-		sh_close = df.high["000001.XSHG"][0]
-		se_close = df.high[self.code][0]
 		self.rs_data.update_daily(se_close,sh_close)
 
-		self.calculate_n()
 		if(self.portfolio_strategy_short!=0):
 			self.position_day += 1
 
@@ -541,7 +552,43 @@ class StockInfo(BaseClass):
 	 #设置仓位数量
 	def set_buy_count(self,count):
 		self.portfolio_strategy_short = count
-
 	def __str__(self):
-        value = "行业：%s,代码:%s,名称:%s,increase:%s,cur_rs:%s,ema_rs:%s"%(self.industry_name,self.security,self.name,self.increase,self.cur_rs,self.ema_rs)
-        return value
+		value = "行业：%s,代码:%s,名称:%s,increase:%s,cur_rs:%s,ema_rs:%s"%(self.industry_name,self.code,self.name,self.increase,self.cur_rs,self.ema_rs)
+		return value
+class CustomIndustry:
+    def __init__(self,industry):
+        self.industry = industry
+        self.stock_infos = list()
+    def init_data(self):
+        pass
+
+    def check_ema_rs(self,series_market_closes):
+        values = self.cal_value()
+        series_rs = values/series_market_closes
+        ema_rs = tb.EMA(np.array(series_rs),39)
+        # print(values,ema_rs,series_rs)
+        self.cur_rs = series_rs[-1]
+        self.cur_emars = ema_rs[-1]
+        return self.cur_rs > self.cur_emars
+
+    def add_stockinfo(self,stock_info):
+        self.stock_infos.append(stock_info)
+    def cal_value(self):
+        # value = 0
+        values = 0
+        for index in range(len(self.stock_infos)):
+            stock_info = self.stock_infos[index]
+            # value += stock_info.close_price
+            if(index == 0):
+                values = stock_info.close_prices
+            else:
+                values += stock_info.close_prices
+        # value = round(value/len(self.stock_infos),4)
+        values = values/len(self.stock_infos)
+        return values
+    def __str__(self):
+        text = ""
+        for stock_info in self.stock_infos:
+            text = text + str(stock_info)+";"
+        return "CustomIndustry:"+text
+
