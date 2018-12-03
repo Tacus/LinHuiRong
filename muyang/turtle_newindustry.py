@@ -259,13 +259,10 @@ class TurtleStrategy(BaseStrategy):
 		current_dt = context.current_dt
 		sh_df = get_price("000001.XSHG",end_date = current_dt,frequency = "minute",fields="close",count=1)
 		sh_close = sh_df.close[0]
-		print("sh_close",sh_close)
 		for industry in self.new_industries:
 			for stock_info in industry.stock_infos:
 				if(len(stock_info.N) == 0):
 					continue
-				print("strategy:start_trade")
-
 				order = stock_info.handle_data(context,current_data,sh_close)
 				if order != None and order.filled  > 0 and order.is_buy :
 					if(stock_info.portfolio_strategy_short != 0):
@@ -372,6 +369,7 @@ class StockInfo(BaseClass):
 		#更新rs数据
 	def init_rs_data(self,rs):
 	    self.rs_data = StockRSData(self.code,self.rs_period)
+	    print("rs",rs)
 	    self.rs_data.set_rs(rs)
 
 	def set_data(self,increase,close_price,close_prices,cur_rs,ema_rs,volume):
