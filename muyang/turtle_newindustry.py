@@ -247,7 +247,7 @@ class TurtleStrategy(BaseStrategy):
 			# Calculate the True Range
 			True_Range = max(h_l, h_c, c_l)
 			# 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
-			current_N = (True_Range + (self.number_days-1)*(self.N)[-1])/self.number_days
+			current_N = (True_Range + (self.number_days-1)*(stock_info.N)[-1])/self.number_days
 			(stock_info.N).append(current_N)
 			del stock_info.N[0]
 
@@ -438,7 +438,7 @@ class StockInfo(BaseClass):
 	   #短时系统操作是否可以入市
 		if(self.unit == 0):
 			return
-		has_break_max = self.has_break_max(current_price,self.system_high_short)
+		has_break_max = self.has_break_max(current_price,self.tq_shorthighprice)
 		rs_satisfied = self.rs_data.can_be_trade()
 
 		# print("是否触发海龟交易信号：%s,rs是否满足条件：%s"%(has_break_max,rs_satisfied))
@@ -458,7 +458,7 @@ class StockInfo(BaseClass):
 			self.p_out_price = current_price - current_price*0.07
 			self.next_out_price = max(self.n_out_price,self.p_out_price)
 			self.mark_in_price = current_price
-			print "开仓！当前价：%s,最高价：%s,N:%s"%(current_price,self.system_high_short,self.N[-1])
+			print "开仓！当前价：%s,最高价：%s,N:%s"%(current_price,self.tq_shorthighprice,self.N[-1])
 			return order_info 
 	#7
 	# 加仓函数
@@ -492,7 +492,7 @@ class StockInfo(BaseClass):
 	# 输出：none
 	def try_market_out(self,current_price):
 		# Function for leaving the market
-		has_break_min = self.has_break_min(current_price ,self.system_low_short)
+		has_break_min = self.has_break_min(current_price ,self.tq_shortlowprice)
 		# 若当前价格低于前out_date天的收盘价的最小值, 则卖掉所有持仓
 		if not has_break_min:
 			return
@@ -500,7 +500,7 @@ class StockInfo(BaseClass):
 		if self.portfolio_strategy_short > 0:
 			# self.portfolio_strategy_short = 0
 			order_info = order(self.code, - self.portfolio_strategy_short)
-			print "离场！当前价：%s,最低价：%s，position:%s"%(current_price,self.system_low_short,self.portfolio_strategy_short)
+			print "离场！当前价：%s,最低价：%s，position:%s"%(current_price,self.tq_shortlowprice,self.portfolio_strategy_short)
 			return order_info
 
 	#15交易日涨幅小于20%退出
@@ -531,7 +531,7 @@ class StockInfo(BaseClass):
 		# Function for leaving the market
 		min_price = max(self.n_out_price,self.p_out_price)
 		n_out_price = current_price - 2*self.N[-1]
-		min_cur_price = min(self.system_low_short,n_out_price)
+		min_cur_price = min(self.tq_shortlowprice,n_out_price)
 		if (not self.tight_out and  min_cur_price > min_price):
 			print "宽止损！当前价：%s,min_cur_price：%s，min_price:%s"%(current_price,min_cur_price,min_price)
 			self.next_out_price = min_price
