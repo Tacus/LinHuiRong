@@ -369,8 +369,7 @@ class StockInfo(BaseClass):
 		#更新rs数据
 	def init_rs_data(self,rs):
 	    self.rs_data = StockRSData(self.code,self.rs_period)
-	    print("rs",rs)
-	    self.rs_data.set_rs(rs)
+	    self.rs_data.set_rs(rs.tolist())
 
 	def set_data(self,increase,close_price,close_prices,cur_rs,ema_rs,volume):
 		self.increase = increase
