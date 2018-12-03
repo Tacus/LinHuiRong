@@ -204,15 +204,16 @@ class TurtleStrategy(BaseStrategy):
 	def calculate_n(self,stock_info,stock_lows,stock_highs,stock_closes):
 		# 需要考虑停牌，上市交易天数过小,这时候是否需要参与交易
 		 #计算海龟交易系统N
-		length = -self.number_days*2
+		length = self.number_days*2
 		if(len(stock_info.N) == 0):
 			series_lowN = stock_lows[-length:]
 			series_highN = stock_highs[-length:]
 			series_closeN = stock_closes[-length:]
+			# print(length,stock_closes)
 			lst = []
 			for i in range(0, length):
-				if(np.isnan(series_closeN[i])):
-					continue
+				# if(np.isnan(series_closeN[i])):
+				# 	continue
 				high_price = series_highN[i]
 				low_price = series_lowN[i]
 				index = i
@@ -232,8 +233,9 @@ class TurtleStrategy(BaseStrategy):
 					if(len(stock_info.N) == 0):
 						current_N = np.mean(lst)
 					else:
-						current_N = (True_Range + (self.number_days-1)*(self.N)[-1])/self.number_days
+						current_N = (True_Range + (self.number_days-1)*(stock_info.N)[-1])/self.number_days
 					(stock_info.N).append(current_N)
+
 		else:
 			cur_low = stock_lows[-1]
 			cur_high = stock_highs[-1]
@@ -249,16 +251,17 @@ class TurtleStrategy(BaseStrategy):
 			(stock_info.N).append(current_N)
 			del stock_info.N[0]
 
+
 	def start_trade(self,context,data):
 		if(0 == len(self.new_industries)):
 			return
 		current_data = get_current_data()
 		current_dt = context.current_dt
 		sh_df = get_price("000001.XSHG",end_date = current_dt,frequency = "minute",fields="close",count=1)
-		sh_close = sh_df.close[0],
+		sh_close = sh_df.close[0]
+		print("sh_close",sh_close)
 		for industry in self.new_industries:
 			for stock_info in industry.stock_infos:
-				print("strategy:1111")
 				if(len(stock_info.N) == 0):
 					continue
 				print("strategy:start_trade")
@@ -555,6 +558,19 @@ class StockInfo(BaseClass):
 	def __str__(self):
 		value = "行业：%s,代码:%s,名称:%s,increase:%s,cur_rs:%s,ema_rs:%s"%(self.industry_name,self.code,self.name,self.increase,self.cur_rs,self.ema_rs)
 		return value
+
+	#是否突破新高
+	def has_break_max(self,close,max_price):
+	    if(close > max_price):
+	        return True
+	    else:
+	        return False
+	#是否创新低
+	def has_break_min(self,close,low_price):
+	    if(close < low_price):
+	        return True
+	    else:
+	        return False
 class CustomIndustry:
     def __init__(self,industry):
         self.industry = industry
