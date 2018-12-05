@@ -264,6 +264,7 @@ class TurtleStrategy(BaseStrategy):
 				if(len(stock_info.N) == 0):
 					continue
 				order = stock_info.handle_data(context,current_data,sh_close)
+				print(order)
 				if order != None and order.filled  > 0 and order.is_buy :
 					if(stock_info.portfolio_strategy_short != 0):
 						stock_info.add_buy_count( order.filled)
