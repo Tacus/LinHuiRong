@@ -198,7 +198,7 @@ class TurtleStrategy(BaseStrategy):
 		tq_longhighprice = max(stock_highs[-self.tq_longperiod:])
 		tq_longlowprice = min(stock_lows[-self.tq_longperiod:])
 		tq_shorthighprice = max(stock_highs[-self.tq_shortperiod:])
-		tq_shortlowprice = max(stock_lows[-self.tq_shortperiod:])
+		tq_shortlowprice = min(stock_lows[-self.tq_shortperiod:])
 
 		stock_info.daily_function(tq_longhighprice,tq_longlowprice,tq_shorthighprice,tq_shortlowprice,se_close,sh_close)
 	#计算海龟系统N
@@ -446,7 +446,7 @@ class StockInfo(BaseClass):
 			return
 		num_of_shares = cash/current_price
 		num_of_shares = min(self.unit,num_of_shares)
-		
+
 		if num_of_shares < 100:
 		    return
 
