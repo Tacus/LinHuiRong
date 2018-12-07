@@ -445,11 +445,13 @@ class StockInfo(BaseClass):
 		if(not has_break_max or not rs_satisfied):
 			return
 		num_of_shares = cash/current_price
+		num_of_shares = min(self.unit,num_of_shares)
+		
 		if num_of_shares < 100:
 		    return
 
 		if self.portfolio_strategy_short < int(self.unit_limit*self.unit):
-			order_info = order(self.code, int(self.unit))
+			order_info = order(self.code, int(num_of_shares))
 			if(order_info == None):
 				print "想买买不起，因为没钱了----开仓！%s(%s)当前价：%s,最高价：%s,N:%s"%(self.name,self.code,current_price,self.tq_shorthighprice,self.N[-1])
 				return
@@ -476,10 +478,11 @@ class StockInfo(BaseClass):
 		if current_price < self.next_add_price: 
 			return
 		num_of_shares = cash/current_price
+		num_of_shares = min(self.unit,num_of_shares)
 		if num_of_shares < 100: 
 			print "想买买不起，因为没钱了！------加仓！%s(%s)当前价：%s,上次突破买入价：%s，N:%s,unit:%s,position:%s"%(self.name,self.code,current_price,break_price,self.N[-1],self.unit,self.portfolio_strategy_short)
-		    return
-		order_info = order(self.code, int(self.unit))
+			return
+		order_info = order(self.code, int(num_of_shares))
 		if(order_info == None):
 			return
 		# self.portfolio_strategy_short += int(self.unit)
