@@ -155,7 +155,8 @@ class TurtleStrategy(BaseStrategy):
 
 		#获取今日该股最高价与上证最高价求得rs（未来函数）
 		df = get_price("000001.XSHG",end_date = end_date,count = 1,frequency = "1d",fields = ("high"))
-		sh_close = df.high[0]
+		sh_close = df.high[0] #TODO
+
 		for industry in self.new_industries:
 			for stock_info in industry.stock_infos:
 				code = stock_info.code
@@ -264,7 +265,6 @@ class TurtleStrategy(BaseStrategy):
 				if(len(stock_info.N) == 0):
 					continue
 				order = stock_info.handle_data(context,current_data,sh_close)
-				print(order)
 				if order != None and order.filled  > 0 and order.is_buy :
 					if(stock_info.portfolio_strategy_short != 0):
 						stock_info.add_buy_count( order.filled)
@@ -364,7 +364,7 @@ class StockInfo(BaseClass):
 		self.increase_period = 20
 
 		self.rs_period = 250
-
+		self.tight_out = True
 		self.N = list()
 
 		#更新rs数据
@@ -403,8 +403,9 @@ class StockInfo(BaseClass):
 		order_info = None
 		if(self.portfolio_strategy_short == 0):
 			order_info = self.try_market_in(current_price,cash)
+			return order_info
 		else:
-			stock_info.set_appropriate_out_price(current_price)
+			self.set_appropriate_out_price(current_price)
 			order_info = self.try_stop_loss(current_price)
 			if(order_info != None):
 				return order_info
@@ -417,6 +418,7 @@ class StockInfo(BaseClass):
 			# order_info = self.try_market_stop_profit(current_price)
 			# if(order_info != None):
 			#     return order_info
+
 	#计算交易单位
 	def calculate_unit(self,total_value):
 		value = total_value
@@ -437,18 +439,20 @@ class StockInfo(BaseClass):
 		if(self.unit == 0):
 			return
 		has_break_max = self.has_break_max(current_price,self.tq_shorthighprice)
-		rs_satisfied = self.rs_data.can_be_trade()
-
-		# print("是否触发海龟交易信号：%s,rs是否满足条件：%s"%(has_break_max,rs_satisfied))
+		# rs_satisfied = self.rs_data.can_be_trade() TODO
+		rs_satisfied = True
 
 		if(not has_break_max or not rs_satisfied):
 			return
 		num_of_shares = cash/current_price
-		# if num_of_shares < self.unit:
-		#     return
+		if num_of_shares < 100:
+		    return
 
 		if self.portfolio_strategy_short < int(self.unit_limit*self.unit):
 			order_info = order(self.code, int(self.unit))
+			if(order_info == None):
+				print "想买买不起，因为没钱了----开仓！当前价：%s,最高价：%s,N:%s"%(current_price,self.tq_shorthighprice,self.N[-1])
+				return
 			# self.portfolio_strategy_short += int(self.unit)
 			self.break_price_short = current_price
 			self.next_add_price = current_price + self.add_ratio * self.N[-1]
@@ -472,9 +476,12 @@ class StockInfo(BaseClass):
 		if current_price < self.next_add_price: 
 			return
 		num_of_shares = cash/current_price
-		# if num_of_shares < self.unit: 
-		#     return
+		if num_of_shares < 100: 
+			print "想买买不起，因为没钱了！------加仓！当前价：%s,上次突破买入价：%s，N:%s,unit:%s,position:%s"%(current_price,break_price,self.N[-1],self.unit,self.portfolio_strategy_short)
+		    return
 		order_info = order(self.code, int(self.unit))
+		if(order_info == None):
+			return
 		# self.portfolio_strategy_short += int(self.unit)
 		self.break_price_short = current_price
 		self.next_add_price = current_price + self.add_ratio * self.N[-1]
