@@ -1,4 +1,0 @@
-1.history()
-2.attribute_history()
-3.get_price()
-
