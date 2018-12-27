@@ -1,6 +1,6 @@
-#coding: UTF-8
-from jqdata import jy
-from jqdata import *
+# #coding: UTF-8
+# from jqdata import jy
+# from jqdata import *
 import pandas as pd
 import numpy as np
 import talib as tb
@@ -33,3 +33,6 @@ def get_sw_quote(codes,end_date=None,count=None,start_date=None):
     df2  = pd.merge(code_df, df, on='InnerCode',copy = False).set_index(['TradingDay','SecuCode'])
     df2.drop(['InnerCode'],axis=1,inplace=True)
     return df2.to_panel()
+
+
+print(sid(1))
