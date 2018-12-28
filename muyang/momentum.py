@@ -1,291 +1,192 @@
-# Implementation of the Stocks On The Move system by Andreas Clenow
-# http://www.followingthetrend.com/stocks-on-the-move/
-
-import numpy as np
+# 导入函数库
+from jqdata import *
+import numpy as np  # we're using this for various math operations
+from scipy import stats  # using this for the reg slope
 import pandas as pd
-import scipy.stats as stats
-import time
-from quantopian.pipeline import Pipeline
-from quantopian.pipeline import CustomFactor
-from quantopian.pipeline.data import morningstar
-from quantopian.pipeline.factors import EWMA, Latest, SimpleMovingAverage
-from quantopian.pipeline.data.builtin import USEquityPricing
-from quantopian.algorithm import attach_pipeline, pipeline_output
 
-UniverseSize = 500
-DailyRangePerStock = 0.001 # targeting 10bp of account value
-RebalanceThreshold = 0.005 # don't rebalance if the difference is less than 50bp of account value
-
-# This is the momentum factor, which is the 'slope' of an exponential regression
-# (ie a linear regression of logarithms), multiplied the the R-Squared of that regression
-class Momentum(CustomFactor):   
-    inputs = [USEquityPricing.close] 
-    window_length = 90
-    def compute(self, today, assets, out, close):   
-        x = pd.Series(range(0,self.window_length))
-        log_close = np.log(close)
-        scores = np.empty(len(close.T), dtype=np.float64)  
-        for i in range(0,len(assets)):
-            if (not np.all(np.isnan(log_close[:,i]))):
-                y = np.copy(log_close[:,i])
-                # interpolate NaN, not forward-looking since we are regressing anyway
-                try:
-                    mask = np.isnan(y)
-                    y[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), y[~mask])
-                    slope, _, r, _, _ = stats.linregress(x, y)
-                    scores[i] = slope * 256.0 * r * r
-                except:
-                    scores[i] = -1000.0
-                    log.error("Regression error!")
-            else:
-                scores[i] = -1000.0
-        out[:] = scores
-
-def descending_rank(a):
-    return a.argsort()[::-1].argsort()
-
-# This is the momentum factor, except only calculated for those stocks which will end up
-# keeping within our set_screen.  
-class MomentumOfTopN(CustomFactor):   
-    inputs = [USEquityPricing.close, morningstar.valuation.shares_outstanding] 
-    window_length = 90
-    def compute(self, today, assets, out, close, shares):  
-        # get our universe in here again because lame
-        starting_caps = close[-1] * shares[-1]
-        starting_caps[np.isnan(starting_caps)] = 0.0
-        cap_ranks = descending_rank(starting_caps)
-        x = pd.Series(range(0,self.window_length))
-        log_close = np.log(close)
-        scores = np.empty(len(close.T), dtype=np.float64)  
-        for i in range(0,len(assets)):
-            if (cap_ranks[i] < UniverseSize):
-                if (not np.all(np.isnan(log_close[:,i]))):
-                    y = np.copy(log_close[:,i])
-                    # interpolate NaN, not forward-looking since we are regressing anyway
-                    try:
-                        mask = np.isnan(y)
-                        y[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), y[~mask])
-                        slope, _, r, _, _ = stats.linregress(x, y)
-                        scores[i] = slope * 256.0 * r * r
-                    except:
-                        scores[i] = -1000.0
-                        log.error("Regression error!")
-                else:
-                    scores[i] = -1000.0
-            else:
-                scores[i] = -1000.0
-        out[:] = scores
-        
-class MarketCap(CustomFactor):   
-    inputs = [USEquityPricing.close, morningstar.valuation.shares_outstanding] 
-    window_length = 1
-    def compute(self, today, assets, out, close, shares):       
-        out[:] = close[-1] * shares[-1]
-
-# the biggest absolute overnight gap in the previous 90 sessions
-class MaxGap(CustomFactor):   
-    inputs = [USEquityPricing.close] 
-    window_length = 90
-    def compute(self, today, assets, out, close):    
-        abs_log_rets = np.abs(np.diff(np.log(close),axis=0))
-        max_gap = np.max(abs_log_rets, axis=0)
-        out[:] = max_gap
-
-# the Average True Range over the last 20 sessions
-class ATR(CustomFactor):
-    inputs = [USEquityPricing.close,USEquityPricing.high,USEquityPricing.low]
-    window_length = 21
-    def compute(self, today, assets, out, close, high, low):
-        hml = high - low
-        hmpc = np.abs(high - np.roll(close, 1, axis=0))
-        lmpc = np.abs(low - np.roll(close, 1, axis=0))
-        tr = np.maximum(hml, np.maximum(hmpc, lmpc))
-        atr = np.mean(tr[1:], axis=0)
-        out[:] = atr
-
+# 初始化函数，设定基准等等
 def initialize(context):
-    context.spy = sid(8554)
-    set_benchmark(context.spy)
+    # 设定沪深300作为基准
+    set_benchmark('000300.XSHG')
+    # 开启动态复权模式(真实价格)
+    set_option('use_real_price', True)
+    # 输出内容到日志 log.info()
+    log.info('初始函数开始运行且全局只运行一次')
+    # 过滤掉order系列API产生的比error级别低的log
+    # log.set_level('order', 'error')
     
-    momentum = MomentumOfTopN()
-    mkt_cap = MarketCap()
-    max_gap = MaxGap()
-    atr = ATR()
-    latest = Latest(inputs=[USEquityPricing.close])
-    mkt_cap_rank = mkt_cap.rank(ascending=False)
-    universe = (mkt_cap_rank <= UniverseSize)
-    momentum_rank = momentum.rank(mask=universe, ascending=False)
-    sma100 = SimpleMovingAverage(inputs=[USEquityPricing.close], window_length=100)
-
-    pipe = Pipeline()
-    pipe.add(momentum, 'momentum')
-    pipe.add(max_gap, 'max_gap')
-    pipe.add(mkt_cap, 'mkt_cap')
-    pipe.add(mkt_cap_rank, 'mkt_cap_rank')
-    pipe.add(sma100, 'sma100')
-    pipe.add(latest, 'latest')
-    pipe.add(atr, 'atr')
-    pipe.add(momentum_rank, 'momentum_rank')
-    # pre-screen all the NaN stuff, and crop down to our pseudo-S&P 500 universe
-    pipe.set_screen(universe & 
-                    (momentum.eq(momentum)) & # these are just to drop NaN
-                    (sma100.eq(sma100)) &
-                    (mkt_cap.eq(mkt_cap))
-                   )    
-    pipe = attach_pipeline(pipe, name='sotm')
-    # do our work on Wednesdays, as in the books.
-    schedule_function(func=allocate_1, 
-                      date_rule=date_rules.week_start(days_offset=2),
-                      time_rule=time_rules.market_open(minutes=60),
-                      half_days=True)
-    schedule_function(func=allocate_2, 
-                      date_rule=date_rules.week_start(days_offset=2),
-                      time_rule=time_rules.market_open(minutes=90),
-                      half_days=True)
-    schedule_function(func=allocate_3, 
-                      date_rule=date_rules.week_start(days_offset=2),
-                      time_rule=time_rules.market_open(minutes=120),
-                      half_days=True)
-    schedule_function(func=record_vars,
-                      date_rule=date_rules.every_day(),
-                      time_rule=time_rules.market_open(minutes=1),
-                      half_days=True)
-    schedule_function(func=record_vars,
-                      date_rule=date_rules.every_day(),
-                      time_rule=time_rules.market_close(),
-                      half_days=True)
-    schedule_function(func=cancel_all,
-                      date_rule=date_rules.every_day(),
-                      time_rule=time_rules.market_close(),
-                      half_days=True)
-    context.rebalance_needed = False
-    set_slippage(slippage.FixedSlippage(spread=0.01))
-    set_commission(commission.PerShare(cost=0.0035, min_trade_cost=0.35))
+    ### 股票相关设定 ###
+    # 股票类每笔交易时的手续费是：买入时佣金万分之三，卖出时佣金万分之三加千分之一印花税, 每笔交易佣金最低扣5块钱
+    set_order_cost(OrderCost(close_tax=0.001, open_commission=0.0003, close_commission=0.0003, min_commission=5), type='stock')
     
-# This function trims down the Pipeline results to those stocks which allow our portfolio
-# to hold.  Stocks which fall out of these criteria are sold.
-# 1. In the top 20% of the stocks, ranked by their momentum
-# 2. No recent gaps more than 15%, in either direction
-# 3. Stock is trading above it's 100-session moving average.  Here we use the exponential 
-#    moving average, I think the book might be using the simple moving average.
-def filter_pipeline_results(results):
-    # remove those whose momentum rank is not in the top 20%
-    filtered = results[results['momentum_rank'] < 0.2*UniverseSize]
-    # filter out gaps
-    filtered = filtered[filtered['max_gap'] < 0.15]
-    # filter out stocks under 100 EMA
-    filtered = filtered[filtered['latest'] > filtered['sma100']]
-    return filtered
+    ## 运行函数（reference_security为运行时间的参考标的；传入的标的只做种类区分，因此传入'000300.XSHG'或'510300.XSHG'是一样的）
+      # 开盘前运行
+    run_daily(before_market_open, time='before_open', reference_security='000300.XSHG') 
+      # 开盘时运行
+    run_daily(market_open, time='open', reference_security='000300.XSHG')
+      # 收盘后运行
+    run_daily(after_market_close, time='after_close', reference_security='000300.XSHG')
 
-def before_trading_start(context, data):
-    results = pipeline_output('sotm').sort('momentum_rank')
-    filtered = filter_pipeline_results(results)
-    context.pool = filtered
-    update_universe(filtered.index)
-
-def sell_positions(context, data):
-    cash_freed = 0.0
-    s = ""
-    for sid in context.portfolio.positions:
-        position = context.portfolio.positions[sid]
-        cash_worth = position.amount * position.last_sale_price
-        # anything not in the pool of allowed stocks is immediately sold
-        if ((sid not in context.pool.index)  &
-            (sid in data)):
-            s = s + "%s, " % sid.symbol
-            order_target_percent(sid, 0.0)
-            cash_freed = cash_freed + cash_worth
-    log.info(s)
-    return cash_freed
-
-def desired_position_size_in_shares(context, data, sid):
-    account_value = context.account.equity_with_loan
-    target_range = DailyRangePerStock
-    estimated_atr = context.pool['atr'][sid]
-    return (account_value * target_range) / estimated_atr
-
-def rebalance_positions(context, data):
-    account_value = context.account.equity_with_loan
-    cash_freed = 0.0
-    s = ""
-    for sid in context.portfolio.positions:
-        position = context.portfolio.positions[sid]
-        current_shares = position.amount
-        if (sid in context.pool.index):
-            target_shares = desired_position_size_in_shares(context, data, sid)
-            sid_cash_freed = (current_shares - target_shares) * position.last_sale_price
-            # only rebalance if we are buying or selling more than a certain pct of
-            # account value, to save on transaction costs
-            if ((abs(sid_cash_freed / account_value) > RebalanceThreshold) &
-                (sid in data)):
-                s = s + "%s (%d -> %d), " % (sid.symbol, int(current_shares), int(target_shares))
-                order_target(sid, target_shares)
-                cash_freed = cash_freed + sid_cash_freed
-    log.info(s)
-    return cash_freed
-
-def should_rebalance(context):
-    ret = context.rebalance_needed
-    context.rebalance_needed = not context.rebalance_needed
-    return ret
-
-# This returns the global switch as to whether we can add any new positions,
-# or only sell/rebalance positions.
-def can_buy(context, data):
-    latest = data[context.spy].close_price
-    h = history(200,'1d','close_price')
-    avg = h[context.spy].mean()
-    return latest > avg
-
-# This function is for adding new positions, by iterating through the 
-# eligible stocks in order of momentum, and buying them if we have (anticipate
-# having) enough cash to do so.
-def add_positions(context, data, cash_available):   
-    s = ""
-    for i in range(0,len(context.pool)):
-        sid = context.pool.index[i]
-        if ((sid not in context.portfolio.positions) & (sid in data)):
-            desired_shares = desired_position_size_in_shares(context, data, sid)
-            cash_req = desired_shares * data[sid].close_price
-            if ((cash_req < cash_available)):
-                s = s + "%s (%d shares), " % (sid.symbol, int(desired_shares))
-                order_target(sid, desired_shares)
-                cash_available = cash_available - cash_req
-    log.info(s)
-
-def allocate_1(context, data):
-    log.info("Selling...")
-    cash_from_sales = sell_positions(context, data)
+    g.investment_set = 1  #选股池，1：沪深300指数  2：中证500
     
-def allocate_2(context, data):
-    if (should_rebalance(context)):
-        log.info("Rebalancing...")
-        cash_from_rebalance = rebalance_positions(context, data)
+    
+    # This version uses the average of two momentum slopes.
+    # Want just one? Set them both to the same number.
+    g.momentum_window = 60  # first momentum window.
+    g.momentum_window2 = 90  # second momentum window
+    
+    # Limit minimum slope. Keep in mind that shorter momentum windows
+    # yield more extreme slope numbers. Adjust one, and you may want
+    # to adjust the other.
+    g.minimum_momentum = 60  # momentum score cap
+    
+    # Fixed number of stocks in the portfolio. How diversified
+    # do you want to be?
+    g.number_of_stocks = 25  # portfolio size
+    g.index_id = sid(8554) # identifier for the SPY. used for trend filter.
+    g.index_average_window = 100  # moving average periods for index filter
+    
+    # enable/disable trend filter.
+    g.index_trend_filter = True  
+    
+    # Most momentum research excludes most recent data.
+    g.exclude_days = 5  # excludes most recent days from momentum calculation
+    
+    # Set trading frequency here.
+    g.trading_frequency = date_rules.month_start()
+    
+    # identifier for the cash management etf, if used.
+    g.use_bond_etf = True
+    g.bond_etf = sid(23870) 
+    
+    # 1 = inv.vola. 2 = equal size. Suggest to implement 
+    # market cap and inverse market cap as well. There's 
+    # lots of room for development here.
+    g.size_method = 2 
+    
+    
+    run_monthly(my_rebalance, monthday = 1, time='open+1h', reference_security='000300.XSHG')
 
-def allocate_3(context, data):
-    if (can_buy(context, data)):
-        log.info("Buying...")
-        add_positions(context, data, context.portfolio.cash)
+    run_daily(my_record_vars,time='close', reference_security='000300.XSHG')
+    # Create our dynamic stock selector - getting the top 500 most liquid US
+    # stocks.
+    
+    if(g.investment_set == 1):
+        inv_index = '000300.XSHG'
+    elif(g.investment_set == 2):
+        inv_index = '000905.XSHG'
+
+    g.inv_set = get_index_stocks(inv_index)
+    
+def my_rebalance(context):
+    # Get data
+    hist_window = max(g.momentum_window,
+                      g.momentum_window2) + g.exclude_days
+
+    end_date = context.current_dt - timedelta(days = 1)
+    panel = get_price(g.inv_set,end_date = end_date,count = hist_window,fields = ["close"])
+    hist = panel.close
+    data_end = -1 * g.exclude_days # exclude most recent data
+
+    momentum1_start = -1 * (g.momentum_window + g.exclude_days)
+    momentum_hist1 = hist[momentum1_start:data_end]
+
+    momentum2_start = -1 * (g.momentum_window2 + g.exclude_days)
+    momentum_hist2 = hist[momentum2_start:data_end]
+
+    # Calculate momentum scores for all stocks.
+    momentum_list = momentum_hist1.apply(slope)  # Mom Window 1
+    momentum_list2 = momentum_hist2.apply(slope)  # Mom Window 2
+
+    # Combine the lists and make average
+    momentum_concat = pd.concat((momentum_list, momentum_list2))
+    mom_by_row = momentum_concat.groupby(momentum_concat.index)
+    mom_means = mom_by_row.mean()
+
+    # Sort the momentum list, and we've got ourselves a ranking table.
+    ranking_table = mom_means.sort_values(ascending=False)
+
+    # Get the top X stocks, based on the setting above. Slice the dictionary.
+    # These are the stocks we want to buy.
+    buy_list = ranking_table[:g.number_of_stocks]
+    final_buy_list = buy_list[buy_list > g.minimum_momentum] # those who passed minimum slope requirement
+
+    # Calculate inverse volatility, for position size.
+    inv_vola_table = hist[buy_list.index].apply(inv_vola_calc)
+    # sum inv.vola for all selected stocks.
+    sum_inv_vola = np.sum(inv_vola_table)
+
+    # Check trend filter if enabled.
+    if (context.index_trend_filter):
+        index_history = data.history(
+            g.index_id,
+            "close",
+            g.index_average_window,
+            "1d")  # Gets index history
+        index_sma = index_history.mean()  # Average of index history
+        current_index = index_history[-1]  # get last element
+        # declare bull if index is over average
+        bull_market = current_index > index_sma
+
+    # if trend filter is used, only buy in bull markets
+    # else always buy
+    if context.index_trend_filter:
+        can_buy = bull_market
     else:
-        log.info("Cannot buy, pass.")
-                 
-def record_vars(context, data):
-    record(PctCash=(context.portfolio.cash / context.account.equity_with_loan))
-    record(CanBuy=can_buy(context, data))
-    pos_count = len([s for s in context.portfolio.positions if context.portfolio.positions[s].amount != 0])
-    record(Stocks=(pos_count / 100.0)) # scale so that the other numbers don't get squished
-    
-def handle_data(context, data):
-    pass
+        can_buy = True
 
-def cancel_all(context, data):
-    sids_cancelled = set()
-    open_orders = get_open_orders()
-    for security, orders in open_orders.iteritems():  
-        for oo in orders: 
-            sids_cancelled.add(oo.sid)
-            cancel_order(oo)
-    n_cancelled = len(sids_cancelled)
-    if (n_cancelled > 0):
-        log.info("Cancelled %d orders" % n_cancelled)
-    return sids_cancelled 
+
+    equity_weight = 0.0 # for keeping track of exposure to stocks
+    
+    # Sell positions no longer wanted.
+    for security in context.portfolio.positions:
+        if (security not in final_buy_list):
+            if (security.sid != context.bond_etf):
+                # print 'selling %s' % security
+                order_target(security, 0.0)
+                
+    vola_target_weights = inv_vola_table / sum_inv_vola
+    
+    for security in final_buy_list.index:
+        # allow rebalancing of existing, and new buys if can_buy, i.e. passed trend filter.
+        if (security in context.portfolio.positions) or (can_buy): 
+            if (g.size_method == 1):
+                weight = vola_target_weights[security]
+            elif (g.size_method == 2):
+                weight = (1.0 / context.number_of_stocks)
+                print g.number_of_stocks
+            order_target_percent(security, weight)
+            equity_weight += weight
+    
+       
+
+    # Fill remaining portfolio with bond ETF
+    etf_weight = max(1 - equity_weight, 0.0)
+
+    print 'equity exposure should be %s ' % equity_weight
+
+    if (g.use_bond_etf):
+        order_target_percent(g.bond_etf, etf_weight)
+
+
+def slope(ts):
+    """
+    Input: Price time series.
+    Output: Annualized exponential regression slope, multipl
+    """
+    x = np.arange(len(ts))
+    log_ts = np.log(ts)
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, log_ts)
+    annualized_slope = (np.power(np.exp(slope), 250) - 1) * 100
+    return annualized_slope * (r_value ** 2)
+
+def inv_vola_calc(ts):
+    """
+    Input: Price time series.
+    Output: Inverse exponential moving average standard deviation. 
+    Purpose: Provides inverse vola for use in vola parity position sizing.
+    """
+    returns = np.log(ts).diff()
+    stddev = returns.ewm(halflife=20, ignore_na=True, min_periods=0,
+                         adjust=True).std(bias=False).dropna()
+    return 1 / stddev.iloc[-1]
