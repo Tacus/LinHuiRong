@@ -43,7 +43,7 @@ def initialize(context):
     # Fixed number of stocks in the portfolio. How diversified
     # do you want to be?
     g.number_of_stocks = 25  # portfolio size
-    g.index_id = sid(8554) # identifier for the SPY. used for trend filter.
+    g.index_id = "000001.XSHG" # identifier for the SPY. used for trend filter.
     g.index_average_window = 100  # moving average periods for index filter
     
     # enable/disable trend filter.
@@ -118,11 +118,9 @@ def my_rebalance(context):
 
     # Check trend filter if enabled.
     if (context.index_trend_filter):
-        index_history = data.history(
-            g.index_id,
-            "close",
-            g.index_average_window,
-            "1d")  # Gets index history
+         # Gets index history
+        index_history = get_price(g.index_id,end_date = end_date,count = g.index_average_window,fields = ["close"])
+
         index_sma = index_history.mean()  # Average of index history
         current_index = index_history[-1]  # get last element
         # declare bull if index is over average
