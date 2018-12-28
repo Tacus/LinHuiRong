@@ -82,7 +82,7 @@ def my_rebalance(context):
     # Combine the lists and make average
     momentum_concat = pd.concat((momentum_list, momentum_list2))
     mom_by_row = momentum_concat.groupby(momentum_concat.index)
-    mom_means = mom_by_row.mean().to_list()
+    mom_means = mom_by_row.mean()
 
     # Sort the momentum list, and we've got ourselves a ranking table.
     ranking_table = mom_means.sort_values(ascending=False)
