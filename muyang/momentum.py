@@ -10,22 +10,6 @@ def initialize(context):
     set_benchmark('000300.XSHG')
     # 开启动态复权模式(真实价格)
     set_option('use_real_price', True)
-    # 输出内容到日志 log.info()
-    log.info('初始函数开始运行且全局只运行一次')
-    # 过滤掉order系列API产生的比error级别低的log
-    # log.set_level('order', 'error')
-    
-    ### 股票相关设定 ###
-    # 股票类每笔交易时的手续费是：买入时佣金万分之三，卖出时佣金万分之三加千分之一印花税, 每笔交易佣金最低扣5块钱
-    set_order_cost(OrderCost(close_tax=0.001, open_commission=0.0003, close_commission=0.0003, min_commission=5), type='stock')
-    
-    ## 运行函数（reference_security为运行时间的参考标的；传入的标的只做种类区分，因此传入'000300.XSHG'或'510300.XSHG'是一样的）
-      # 开盘前运行
-    run_daily(before_market_open, time='before_open', reference_security='000300.XSHG') 
-      # 开盘时运行
-    run_daily(market_open, time='open', reference_security='000300.XSHG')
-      # 收盘后运行
-    run_daily(after_market_close, time='after_close', reference_security='000300.XSHG')
 
     g.investment_set = 1  #选股池，1：沪深300指数  2：中证500
     
@@ -52,12 +36,9 @@ def initialize(context):
     # Most momentum research excludes most recent data.
     g.exclude_days = 5  # excludes most recent days from momentum calculation
     
-    # Set trading frequency here.
-    g.trading_frequency = date_rules.month_start()
-    
     # identifier for the cash management etf, if used.
     g.use_bond_etf = True
-    g.bond_etf = sid(23870) 
+    g.bond_etf = "000300.XSHG" 
     
     # 1 = inv.vola. 2 = equal size. Suggest to implement 
     # market cap and inverse market cap as well. There's 
@@ -67,7 +48,7 @@ def initialize(context):
     
     run_monthly(my_rebalance, monthday = 1, time='open+1h', reference_security='000300.XSHG')
 
-    run_daily(my_record_vars,time='close', reference_security='000300.XSHG')
+    # run_daily(my_record_vars,time='close', reference_security='000300.XSHG')
     # Create our dynamic stock selector - getting the top 500 most liquid US
     # stocks.
     
@@ -101,7 +82,7 @@ def my_rebalance(context):
     # Combine the lists and make average
     momentum_concat = pd.concat((momentum_list, momentum_list2))
     mom_by_row = momentum_concat.groupby(momentum_concat.index)
-    mom_means = mom_by_row.mean()
+    mom_means = mom_by_row.mean().to_list()
 
     # Sort the momentum list, and we've got ourselves a ranking table.
     ranking_table = mom_means.sort_values(ascending=False)
@@ -137,9 +118,9 @@ def my_rebalance(context):
     equity_weight = 0.0 # for keeping track of exposure to stocks
     
     # Sell positions no longer wanted.
-    for security in context.portfolio.positions:
+    for security in context.portfolio.positions.keys:
         if (security not in final_buy_list):
-            if (security.sid != context.bond_etf):
+            if (security != context.bond_etf):
                 # print 'selling %s' % security
                 order_target(security, 0.0)
                 
