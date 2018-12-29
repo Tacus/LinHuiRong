@@ -13,7 +13,7 @@ def initialize(context):
 
     g.investment_set = 1  #选股池，1：沪深300指数  2：中证500
     
-    
+    # print(pd.show_versions())
     # This version uses the average of two momentum slopes.
     # Want just one? Set them both to the same number.
     g.momentum_window = 60  # first momentum window.
@@ -57,7 +57,7 @@ def initialize(context):
     elif(g.investment_set == 2):
         inv_index = '000905.XSHG'
 
-    g.inv_set = get_index_stocks(inv_index)
+    g.inv_set = get_index_stocks(inv_index)[-10:]
     
 def my_rebalance(context):
     # Get data
@@ -78,14 +78,18 @@ def my_rebalance(context):
     # Calculate momentum scores for all stocks.
     momentum_list = momentum_hist1.apply(slope)  # Mom Window 1
     momentum_list2 = momentum_hist2.apply(slope)  # Mom Window 2
-
     # Combine the lists and make average
     momentum_concat = pd.concat((momentum_list, momentum_list2))
     mom_by_row = momentum_concat.groupby(momentum_concat.index)
-    mom_means = mom_by_row.mean().tolist()
-
+    mom_means = mom_by_row.mean()
+    # print(type(mom_means))
+    # print(dir(mom_means))
     # Sort the momentum list, and we've got ourselves a ranking table.
-    ranking_table = mom_means.sort_values(ascending=False)
+    ranking_table = mom_means.order(ascending=True)
+    # print(mom_means)
+    # print(ranking_table)
+    # ranking_table = mom_means.sort(1)
+    # print(ranking_table)
 
     # Get the top X stocks, based on the setting above. Slice the dictionary.
     # These are the stocks we want to buy.
