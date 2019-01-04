@@ -170,6 +170,7 @@ def inv_vola_calc(ts):
     Purpose: Provides inverse vola for use in vola parity position sizing.
     """
     returns = np.log(ts).diff()
+    print(dir(returns))
     stddev = returns.ewm(halflife=20, ignore_na=True, min_periods=0,
                          adjust=True).std(bias=False).dropna()
     return 1 / stddev.iloc[-1]
