@@ -152,6 +152,19 @@ def my_rebalance(context):
         order_target_percent(g.bond_etf, etf_weight)
 
 
+def ewm(series,halflife=20, ignore_na=True, min_periods=0,
+                         adjust=True):
+    log = math.log(0.5)/halflife
+    α = 1-math.exp(log)
+    yt=(1−α)yt−1+αxt,
+
+def calewm(series,y,value):
+    if(y == 0):
+        return value + series[0]
+    series[y]
+    y = y-1
+    value = xx
+    return calewm(series,y,value)
 def slope(ts):
     """
     Input: Price time series.
@@ -170,6 +183,8 @@ def inv_vola_calc(ts):
     Purpose: Provides inverse vola for use in vola parity position sizing.
     """
     returns = np.log(ts).diff()
-    stddev = returns.ewm(halflife=20, ignore_na=True, min_periods=0,
-                         adjust=True).std(bias=False).dropna()
+    returns = ewm(returns,halflife=20, ignore_na=True, min_periods=0,
+                         adjust=True)
+    stddev = returns.std(bias=False).dropna()
+    print("after",returns,type(returns))
     return 1 / stddev.iloc[-1]
