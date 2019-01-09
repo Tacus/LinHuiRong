@@ -155,16 +155,22 @@ def my_rebalance(context):
 def ewm(series,halflife=20, ignore_na=True, min_periods=0,
                          adjust=True):
     log = math.log(0.5)/halflife
-    α = 1-math.exp(log)
-    yt=(1−α)yt−1+αxt,
+    alpha = 1-math.exp(log)
+    return calewm(series,alpha)
 
-def calewm(series,y,value):
-    if(y == 0):
-        return value + series[0]
-    series[y]
-    y = y-1
-    value = xx
-    return calewm(series,y,value)
+def calewm(series,alpha):
+    lenght = len(series)
+    i = 0
+    totalWeight = 0
+    weight = 0
+    yt = 0
+    while i < lenght:
+        value = series[lenght-i-1]
+        weight = math.pow(1-alpha,i)
+        totalWeight += weight
+        yt += value*weight
+        i +=1
+    return yt  
 def slope(ts):
     """
     Input: Price time series.
@@ -175,7 +181,6 @@ def slope(ts):
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, log_ts)
     annualized_slope = (np.power(np.exp(slope), 250) - 1) * 100
     return annualized_slope * (r_value ** 2)
-
 def inv_vola_calc(ts):
     """
     Input: Price time series.
@@ -183,8 +188,9 @@ def inv_vola_calc(ts):
     Purpose: Provides inverse vola for use in vola parity position sizing.
     """
     returns = np.log(ts).diff()
-    returns = ewm(returns,halflife=20, ignore_na=True, min_periods=0,
+    returns = returns.apply(ewm,halflife=20, ignore_na=True, min_periods=0,
                          adjust=True)
     stddev = returns.std(bias=False).dropna()
-    print("after",returns,type(returns))
+    # stddev = returns.ewm(halflife=20, ignore_na=True, min_periods=0,
+    #                      adjust=True).std(bias=False).dropna()
     return 1 / stddev.iloc[-1]
