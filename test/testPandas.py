@@ -3,6 +3,7 @@ import numpy as np
 # import talib as tb
 import pandas as pd
 import re
+import math
 # # close = numpy.random.random(10)
 
 # # print numpy.mean(close)
@@ -12,14 +13,14 @@ import re
 
 # print output
 
-df1 = pd.DataFrame(np.random.randn(3,3),columns = list("ABC"))
-print(df1)
-df2 = pd.DataFrame(list(df1.itertuples(index=False)),columns = list("ABg"))
-df2["A"] = list("123")
-print(df2)
-df = df1.append(df2)
-# df = df1.merge(df2,on = "B",copy = False)
-print(df)
+# df1 = pd.DataFrame(np.random.randn(3,3),columns = list("ABC"))
+# print(df1)
+# df2 = pd.DataFrame(list(df1.itertuples(index=False)),columns = list("ABg"))
+# df2["A"] = list("123")
+# print(df2)
+# df = df1.append(df2)
+# # df = df1.merge(df2,on = "B",copy = False)
+# print(df)
 # df = df.to_panel()
 # print(df)
 # def get_oversea_excelpath(filePath,file_name):
@@ -42,4 +43,9 @@ print(df)
 # 	print("xxx111",match.group(1))
 # print("xxx222",match)
 
+log = math.log(0.5)/10
+a = 1-math.exp(log)
 
+def ewa(com = None,span = None,halflife = None,alpha = None,min_period = 0,adjust = True,ignore_na = False,axis = 0):
+	if(None != com):
+		a = 

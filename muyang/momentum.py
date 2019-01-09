@@ -3,7 +3,7 @@ from jqdata import *
 import numpy as np  # we're using this for various math operations
 from scipy import stats  # using this for the reg slope
 import pandas as pd
-
+import math
 # 初始化函数，设定基准等等
 def initialize(context):
     # 设定沪深300作为基准
