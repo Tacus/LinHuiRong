@@ -5,11 +5,15 @@ from jqdatasdk import *
 import numpy as np  # we're using this for various math operations
 from scipy import stats  # using this for the reg slope
 import pandas as pd
+<<<<<<< HEAD
 
 
 
 auth('18970349344', '159263')
 
+=======
+import math
+>>>>>>> 27ee07ce25e0270f09b9419fa9b9dc910a757db5
 # 初始化函数，设定基准等等
 def initialize(context):
     # 设定沪深300作为基准
@@ -158,6 +162,25 @@ def my_rebalance(context):
         order_target_percent(g.bond_etf, etf_weight)
 
 
+def ewm(series,halflife=20, ignore_na=True, min_periods=0,
+                         adjust=True):
+    log = math.log(0.5)/halflife
+    alpha = 1-math.exp(log)
+    return calewm(series,alpha)
+
+def calewm(series,alpha):
+    lenght = len(series)
+    i = 0
+    totalWeight = 0
+    weight = 0
+    yt = 0
+    while i < lenght:
+        value = series[lenght-i-1]
+        weight = math.pow(1-alpha,i)
+        totalWeight += weight
+        yt += value*weight
+        i +=1
+    return yt  
 def slope(ts):
     """
     Input: Price time series.
@@ -175,7 +198,9 @@ def inv_vola_calc(ts):
     Purpose: Provides inverse vola for use in vola parity position sizing.
     """
     returns = np.log(ts).diff()
-    print(dir(returns))
-    stddev = returns.ewm(halflife=20, ignore_na=True, min_periods=0,
-                         adjust=True).std(bias=False).dropna()
+    returns = returns.apply(ewm,halflife=20, ignore_na=True, min_periods=0,
+                         adjust=True)
+    stddev = returns.std(bias=False).dropna()
+    # stddev = returns.ewm(halflife=20, ignore_na=True, min_periods=0,
+    #                      adjust=True).std(bias=False).dropna()
     return 1 / stddev.iloc[-1]
