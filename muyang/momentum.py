@@ -1,8 +1,14 @@
+#coding:utf-8
 # 导入函数库
-from jqdata import *
+# import jqdatasdk
+from jqdatasdk import *
 import numpy as np  # we're using this for various math operations
 from scipy import stats  # using this for the reg slope
 import pandas as pd
+
+
+
+auth('18970349344', '159263')
 
 # 初始化函数，设定基准等等
 def initialize(context):
@@ -162,7 +168,6 @@ def slope(ts):
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, log_ts)
     annualized_slope = (np.power(np.exp(slope), 250) - 1) * 100
     return annualized_slope * (r_value ** 2)
-def 
 def inv_vola_calc(ts):
     """
     Input: Price time series.
