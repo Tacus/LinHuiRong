@@ -31,8 +31,9 @@ import matplotlib.dates as mdate
 # plt.show()
 # print(pd.date_range('2018-1-2', periods=5))
 # print(list(ts))
-# print(ts[1], ts.describe())
+# print(ts[1], ts.describe(
 
+print(abs(-1))
 def __str__(self):
         value = "行业：%s,代码:%s,名称:%s,increase:%s,cur_rs:%s,ema_rs:%s"%(self.industry_name,self.security,self.name,self.increase,self.cur_rs,self.ema_rs)
         return value

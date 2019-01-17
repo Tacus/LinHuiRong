@@ -235,6 +235,8 @@ class TurtleStrategy(BaseStrategy):
 						current_N = np.mean(lst)
 					else:
 						current_N = (True_Range + (self.number_days-1)*(stock_info.N)[-1])/self.number_days
+					print("True_Range33:",h_l,h_c,c_l,current_N)
+
 					(stock_info.N).append(current_N)
 
 		else:
@@ -250,6 +252,7 @@ class TurtleStrategy(BaseStrategy):
 			# 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
 			current_N = (True_Range + (self.number_days-1)*(stock_info.N)[-1])/self.number_days
 			(stock_info.N).append(current_N)
+			print("True_Range11:",h_l,h_c,c_l,current_N)
 			del stock_info.N[0]
 
 
@@ -426,7 +429,10 @@ class StockInfo(BaseClass):
 		current_N = (self.N)[-1]
 		dollar_volatility = self.dollars_per_share*current_N
 		# 依本策略，计算买卖的单位
+		print("calculate_unit",value,current_N,dollar_volatility,len(self.N))
 		self.unit = value*0.01/dollar_volatility
+		print("unit value",self.unit)
+
 
 	#6
 	# 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
