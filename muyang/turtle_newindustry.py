@@ -235,7 +235,7 @@ class TurtleStrategy(BaseStrategy):
 						current_N = np.mean(lst)
 					else:
 						current_N = (True_Range + (self.number_days-1)*(stock_info.N)[-1])/self.number_days
-					print("True_Range33:",h_l,h_c,c_l,current_N)
+					print("True_Range33:",h_l,h_c,c_l,current_N,stock_info.code)
 
 					(stock_info.N).append(current_N)
 
@@ -252,7 +252,7 @@ class TurtleStrategy(BaseStrategy):
 			# 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
 			current_N = (True_Range + (self.number_days-1)*(stock_info.N)[-1])/self.number_days
 			(stock_info.N).append(current_N)
-			print("True_Range11:",h_l,h_c,c_l,current_N)
+			print("True_Range11:",h_l,h_c,c_l,current_N,stock_info.code)
 			del stock_info.N[0]
 
 
