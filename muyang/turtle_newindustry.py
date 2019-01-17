@@ -205,7 +205,7 @@ class TurtleStrategy(BaseStrategy):
 	def calculate_n(self,stock_info,stock_lows,stock_highs,stock_closes):
 		# 需要考虑停牌，上市交易天数过小,这时候是否需要参与交易
 		 #计算海龟交易系统N
-		length = self.number_days*2
+		length = int(self.number_days*1.5)
 		if(len(stock_info.N) == 0):
 			series_lowN = stock_lows[-length:]
 			series_highN = stock_highs[-length:]
@@ -223,9 +223,10 @@ class TurtleStrategy(BaseStrategy):
 				else:
 					index = i-1
 				last_close = series_closeN[index]
+				cur_close = series_closeN[i]
 				h_l = high_price-low_price
 				h_c = high_price-last_close
-				c_l = last_close-low_price
+				c_l = cur_close-low_price
 				# 计算 True Range 取计算第一天的前20天波动范围平均值
 				True_Range = max(h_l, h_c, c_l)
 				if(len(lst) < self.number_days):
@@ -235,8 +236,6 @@ class TurtleStrategy(BaseStrategy):
 						current_N = np.mean(lst)
 					else:
 						current_N = (True_Range + (self.number_days-1)*(stock_info.N)[-1])/self.number_days
-					print("True_Range33:",h_l,h_c,c_l,current_N,stock_info.code)
-
 					(stock_info.N).append(current_N)
 
 		else:
@@ -251,8 +250,10 @@ class TurtleStrategy(BaseStrategy):
 			True_Range = max(h_l, h_c, c_l)
 			# 计算前g.number_days（大于20）天的True_Range平均值，即当前N的值：
 			current_N = (True_Range + (self.number_days-1)*(stock_info.N)[-1])/self.number_days
+			if(current_N == 0):
+				print("True_Range is zero:",h_l,h_c,c_l,cur_low,cur_high,cur_close,last_close,current_N,stock_info.code)
+				return
 			(stock_info.N).append(current_N)
-			print("True_Range11:",h_l,h_c,c_l,current_N,stock_info.code)
 			del stock_info.N[0]
 
 
