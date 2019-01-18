@@ -117,7 +117,6 @@ class TurtleStrategy(BaseStrategy):
 		self.new_industries = list()
 	
 	def pick_stocks(self,context):
-		del self.new_industries[:]
 		current_dt = context.current_dt
 		end_date = current_dt - timedelta(days = 1)
 		start_date = current_dt - timedelta(days = 400)
@@ -128,7 +127,25 @@ class TurtleStrategy(BaseStrategy):
 		securities = securities_df.index.tolist()
 		count = self.trading_period
 		history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume'])
-		self.pick_strong_stocks("sw_l1",end_date,count,history_data,current_data)
+		pick_result_list = self.pick_strong_stocks("sw_l1",end_date,count,history_data,current_data)
+		if( None != pick_result_list and 0 != len(pick_result_list)):
+			self.insert_to_industrylist(pick_result_list)
+
+	def insert_to_industrylist(self,pick_result_list):
+		for industry_data in pick_result_list:
+			self.insert_industry(industry_data)
+
+	def insert_industry(self,industry_data_new):
+		industry_data = self.get_industry(industry_data_new.industry)
+		if(None != industry_data):
+			industry_data.insert_stock_from_industry(industry_data_new)
+		else:
+			self.new_industries.append(industry_data_new)
+
+	def get_industry(self,industry_code):
+		for industry_data in self.new_industries:
+			if industry_data.industry == industry_code:
+				return industry_data
 
 	def monthly_function(self,context):
 		self.pick_stocks(context)
@@ -160,7 +177,8 @@ class TurtleStrategy(BaseStrategy):
 		for industry in self.new_industries:
 			for stock_info in industry.stock_infos:
 				code = stock_info.code
-				if(current_data[code].paused):
+				if(current_data[code].paused or df_close[code].empty):
+					print("股票停牌退市或者当前数据异常" ,code,current_data[code].paused,df_close[code].empty)
 					continue
 				stock_closes = df_close[code]
 				stock_highs = df_high[code]
@@ -290,6 +308,7 @@ class TurtleStrategy(BaseStrategy):
 		df_volume = history_data["volume"]
 		series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
 		current_data = get_current_data()
+		result = list()
 		for i in range(len(codes)):
 			industry_code = codes[i]
 			if(not industry_code in industry_closes.columns):
@@ -345,7 +364,8 @@ class TurtleStrategy(BaseStrategy):
 
 			if(pick_count>0):
 				new_industry.check_ema_rs(series_market_closes)
-				self.new_industries.append(new_industry)
+				result.append(new_industry)
+		return result
 class StockInfo(BaseClass):
 	def __init__(self,code,name,industry_code,industry_name):
 		super(StockInfo,self).__init__()
@@ -430,10 +450,7 @@ class StockInfo(BaseClass):
 		current_N = (self.N)[-1]
 		dollar_volatility = self.dollars_per_share*current_N
 		# 依本策略，计算买卖的单位
-		print("calculate_unit",value,current_N,dollar_volatility,len(self.N))
 		self.unit = value*0.01/dollar_volatility
-		print("unit value",self.unit)
-
 
 	#6
 	# 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
@@ -592,6 +609,19 @@ class CustomIndustry:
         self.stock_infos = list()
     def init_data(self):
         pass
+
+    def insert_stock_from_industry(self,industry_data):
+    	if(None == industry_data or 0 == len(industry_data.stock_infos)):
+    		return
+
+    	for stock_info in industry_data.stock_infos:
+    		is_exsit = None != self.get_stockinfo(stock_info.code)
+    		if(not is_exsit):
+    			self.add_stockinfo(stock_info)
+    def get_stockinfo(self,stock_code):
+    	for stock_info in self.stock_infos:
+    		if(stock_code == stock_info.code):
+    			return  stock_info
 
     def check_ema_rs(self,series_market_closes):
         values = self.cal_value()
