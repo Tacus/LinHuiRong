@@ -5,15 +5,8 @@ from jqdatasdk import *
 import numpy as np  # we're using this for various math operations
 from scipy import stats  # using this for the reg slope
 import pandas as pd
-<<<<<<< HEAD
-
-
-
-auth('18970349344', '159263')
-
-=======
 import math
->>>>>>> 27ee07ce25e0270f09b9419fa9b9dc910a757db5
+auth('18970349344', '159263')
 # 初始化函数，设定基准等等
 def initialize(context):
     # 设定沪深300作为基准
