@@ -426,7 +426,9 @@ class StockInfo(BaseClass):
 		current_N = (self.N)[-1]
 		dollar_volatility = self.dollars_per_share*current_N
 		# 依本策略，计算买卖的单位
+		print("calculate_unit",value,current_N,dollar_volatility,len(self.N))
 		self.unit = value*0.01/dollar_volatility
+		print("unit value",self.unit)
 
 	#6
 	# 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
