@@ -47,6 +47,7 @@ def pick_strong_stocks(name,datetime,count,history_data,current_data):
 	df_volume = history_data["volume"]
 	series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
 	current_data = get_current_data()
+	stock_infos = list()
 	for i in range(len(codes)):
 		industry_code = codes[i]
 		if(not industry_code in industry_closes.columns):
@@ -55,7 +56,6 @@ def pick_strong_stocks(name,datetime,count,history_data,current_data):
 		industry_name = industry_names[industry_code][-1]
 		securities = get_industry_stocks(industry_code)
 	 
-		stock_infos = list()
 		for security in securities:
 			if(not security in series_increase or current_data[security].paused):
 				continue
@@ -88,18 +88,18 @@ def pick_strong_stocks(name,datetime,count,history_data,current_data):
 			stock_info.set_data(stock_strength,close_price,stock_close,cur_rs,cur_ema_rs,volume)
 			stock_info.init_rs_data(stock_close)
 			stock_infos.append(stock_info)
-		stock_infos = sorted(stock_infos,key = lambda data: data.increase,reverse = True)
-		pick_count = 0
-		new_industry = CustomIndustry(industry_code)
-		for stock_info in stock_infos:
-			cur_rs = stock_info.cur_rs
-			ema_rs = stock_info.ema_rs
-			if(pick_count >= 5):
-				break
-			if(cur_rs>ema_rs):
-				pick_count+=1
-				print(stock_info)
-				new_industry.add_stockinfo(stock_info)
+	stock_infos = sorted(stock_infos,key = lambda data: data.increase,reverse = True)
+	pick_count = 0
+	new_industry = CustomIndustry(industry_code)
+	for stock_info in stock_infos:
+		cur_rs = stock_info.cur_rs
+		ema_rs = stock_info.ema_rs
+		# if(pick_count >= 5):
+		# 	break
+		# if(cur_rs>ema_rs):
+		pick_count+=1
+		print(stock_info)
+		new_industry.add_stockinfo(stock_info)
 
 		# if(pick_count>0):
 		# 	new_industry.check_ema_rs(series_market_closes)
