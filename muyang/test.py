@@ -7,13 +7,15 @@ import Utils
 import talib as tb
 from StockRSData import *
 
-def handle_data(context, data):
+def initialize(context):
+    run_daily(after_market_close, time='after_close', reference_security='000300.XSHG')
+
+def after_market_close(context):
     pick_stocks(context);
     
 def pick_stocks(context):
-
 	current_dt = context.current_dt
-	end_date = current_dt - timedelta(days = 1)
+	end_date = current_dt
 	start_date = current_dt - timedelta(days = 400)
 	start_date = start_date.date()
 	current_data = get_current_data()
@@ -63,7 +65,8 @@ def pick_strong_stocks(name,datetime,count,history_data,current_data):
 			stock_close = df_close[security]
 			# series_rs = stock_close/series_market_closes
 			# series_rs = stock_close/series_market_closes
-			cur_ema_rs = round(tb.EMA(np.array(stock_close),39)[-1],4)
+			# cur_ema_rs = round(tb.EMA(np.array(stock_close),39)[-1],4)
+			cur_ema_rs = stock_close[-1]
 			# increase = round(series_increase[security],4)
 
 			ref_ema_rs30 = stock_close[-60]
