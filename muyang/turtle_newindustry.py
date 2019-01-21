@@ -1,61 +1,39 @@
 #coding = utf-8
 ######### rs选股-海龟交易 #########
-
-#coding: utf-8
 from jqdata import jy
 from jqdata import *
 import pandas as pd
 import numpy as np
 import Utils
 import talib as tb
-# from NewIndustryClass import *
 from StockRSData import *
 
 
-
-def get_mightlymarket_closes(datetime,count):
-	codes = ["000001.XSHG","399006.XSHE","399005.XSHE"]
+def get_strong_market(datetime,count):
+	# codes = ["000001.XSHG","399006.XSHE","399005.XSHE"]
+	codes = ["000001.XSHG"]
 	panel = get_price(codes,end_date = datetime,count = count,fields = ["close"])
-	df_close = panel["close"]
-	series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
-	max_value = -1
-	max_code = None
-	for code in codes:
-		if(series_increase[code]>max_value):
-			max_value = series_increase[code]
-			max_code = code
-	return df_close[max_code]
+	# df_close = panel["close"]
+	# series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
+	# max_value = -1
+	# max_code = None
+	# for code in codes:
+	# 	if(series_increase[code]>max_value):
+	# 		max_value = series_increase[code]
+	# 		max_code = code
+	# return df_close[max_code]
+	return df_close
 
 def handle_data(context,data):
 	g.strategy.handle_data(context,data)
-#     for _,stock_info in g.position_pool.items():
-#         order = stock_info.update(context)
-
-#         if order != None and order.filled  > 0 and order.is_buy :
-#             stock_info.add_buy_count( order.filled)
-#         elif(order != None and order.filled > 0 and not order.is_buy):
-#             stock_info.reduce_buy_count( order.filled)
-#             count = stock_info.get_buy_count()
-#             if(count <= 0):
-#                 del g.position_pool[stock_info.code]
-
-#     for single in g.stock_pool:
-#         order = single.update(context)
-#         if order != None and order.filled  > 0 and order.is_buy :
-#             single.set_buy_count( order.filled)
-#             g.stock_pool.remove(single)
-#             g.position_pool[single.code] = single
-
 
 def initialize(context):
 	set_benchmark('000300.XSHG')
 	# 开启动态复权模式(真实价格)
 	set_option('use_real_price', True)
 	g.period = 240
-	# g.first_run = True
-	# g.new_industries = list()
 	g.strategy = TurtleStrategy(g.period)
-	run_monthly(monthly_function,monthday = 1,time = "before_open")
+	run_monthly(monthly_function,monthday = 1,time = "after_close")
 	run_daily(daily_function,time = "before_open")
 
 def daily_function(context):
@@ -64,18 +42,6 @@ def daily_function(context):
 
 def monthly_function(context):
 	g.strategy.monthly_function(context)
-	# del g.new_industries[:]
-	# current_dt = context.current_dt
-	# end_date = current_dt - timedelta(days = 1)
-	# start_date = current_dt - timedelta(days = 400)
-	# start_date = start_date.date()
-	# current_data = get_current_data()
-	# securities_df = get_all_securities()
-	# securities_df = securities_df[securities_df["start_date"] <= start_date]
-	# securities = securities_df.index.tolist()
-	# count = g.period
-	# history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume'])
-	# get_sw_industry_stocks("sw_l1",end_date,count,history_data,current_data)
 		
 class BaseStrategy(BaseClass):
 	"""docstring for BaseStrategy"""
@@ -103,11 +69,13 @@ class BaseStrategy(BaseClass):
 	def handle_data(self,context,data):
 		pass
 
-
+# 海龟交易策略
 class TurtleStrategy(BaseStrategy):
 	"""docstring for TurtleStrategy"""
 	def __init__(self, trading_period):
 		super(TurtleStrategy, self).__init__()
+
+		# 获取N日股票数据
 		self.trading_period = trading_period
 		self.first_run = True  #是否选股后第一次运行
 		self.tq_longperiod = 55
@@ -118,7 +86,7 @@ class TurtleStrategy(BaseStrategy):
 	
 	def pick_stocks(self,context):
 		current_dt = context.current_dt
-		end_date = current_dt - timedelta(days = 1)
+		end_date = current_dt
 		start_date = current_dt - timedelta(days = 400)
 		start_date = start_date.date()
 		current_data = get_current_data()
@@ -126,8 +94,8 @@ class TurtleStrategy(BaseStrategy):
 		securities_df = securities_df[securities_df["start_date"] <= start_date]
 		securities = securities_df.index.tolist()
 		count = self.trading_period
-		history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume'])
-		pick_result_list = self.pick_strong_stocks("sw_l1",end_date,count,history_data,current_data)
+		
+		pick_result_list = self.pick_strong_stocks("sw_l1",end_date,count)
 		if( None != pick_result_list and 0 != len(pick_result_list)):
 			self.insert_to_industrylist(pick_result_list)
 
@@ -163,7 +131,7 @@ class TurtleStrategy(BaseStrategy):
 				securities.append(stock_info.code)
 		history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume','high','low'])
 		current_data = get_current_data()
-		series_market_closes = get_mightlymarket_closes(end_date,count)
+		series_market_closes = get_strong_market(end_date,count)
 		df_close = history_data["close"]
 		df_high = history_data["high"]
 		df_low = history_data["low"]
@@ -296,57 +264,42 @@ class TurtleStrategy(BaseStrategy):
 					stock_info.reduce_buy_count( order.filled)
 
 	def handle_data(self,context,data):
+
 		self.start_trade(context,data)
 
-	def pick_strong_stocks(self,name,datetime,count,history_data,current_data):
+	def pick_strong_stocks(self,name,datetime,count):
+		history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume'])
 		codes = get_industries(name).index;
 		panel_industry = Utils.get_sw_quote(codes,end_date=datetime,count=count)
 		industry_closes = panel_industry.ClosePrice
 		industry_names = panel_industry.ChiName
-		series_market_closes = get_mightlymarket_closes(datetime,count)
+		series_market_closes = get_strong_market(datetime,count)
 		df_close = history_data["close"]
 		df_volume = history_data["volume"]
-		series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
+		# series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
 		current_data = get_current_data()
 		result = list()
 		for i in range(len(codes)):
 			industry_code = codes[i]
 			if(not industry_code in industry_closes.columns):
 				continue
-			# industry_close = industry_closes[industry_code]
 			industry_name = industry_names[industry_code][-1]
 			securities = get_industry_stocks(industry_code)
-		 
 			stock_infos = list()
 			for security in securities:
 				if(not security in series_increase or current_data[security].paused):
 					continue
 
 				stock_close = df_close[security]
-				series_rs = stock_close/series_market_closes
-				cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
+				# series_rs = stock_close/series_market_closes
+				# cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
 				# increase = round(series_increase[security],4)
-
-				ref_ema_rs30 = series_rs[-30]
-				c30 = (cur_ema_rs - ref_ema_rs30)/ref_ema_rs30
-
-				ref_ema_rs60 = series_rs[-60]
-				c60 = (ref_ema_rs30 - ref_ema_rs60)/ref_ema_rs60
-				
-				ref_ema_rs90 = series_rs[-90]
-				c90 = (ref_ema_rs60 - ref_ema_rs90)/ref_ema_rs90
-
-				ref_ema_rs120 = series_rs[-120]
-				c120 = (ref_ema_rs90 - ref_ema_rs120)/ref_ema_rs120
-
-				stock_strength = ((1+c120*0.8)*(1+c90*0.8)*(1+c60*0.8)*(1+c30*1.6)-1)*100#计算个股强度
-
+				stock_strength = get_price_rps(stock_close)
 				volume = df_volume[security][-1]
 				cur_rs = round(series_rs[-1],4)
-				close_price = stock_close[-1]
 				security_name = current_data[security].name
 				stock_info = StockInfo(security,security_name,industry_code,industry_name)
-				stock_info.set_data(stock_strength,close_price,stock_close,cur_rs,cur_ema_rs,volume)
+				stock_info.set_data(stock_strength,cur_price,stock_close,cur_rs,cur_ema_rs,volume)
 				stock_info.init_rs_data(series_rs)
 				stock_infos.append(stock_info)
 			stock_infos = sorted(stock_infos,key = lambda data: data.increase,reverse = True)
@@ -366,6 +319,23 @@ class TurtleStrategy(BaseStrategy):
 				new_industry.check_ema_rs(series_market_closes)
 				result.append(new_industry)
 		return result
+	#计算个股强度
+	def get_price_rps(stock_close):
+		cur_price = stock_close[-1]
+		c60 = stock_close[-60]
+		r60 = (cur_price - c60)/c60
+
+		c120 = stock_close[-120]
+		r120 = (c60 - c120)/c120
+		
+		c180 = stock_close[-180]
+		r180 = (c120 - c180)/c180
+
+		c240 = stock_close[-240]
+		r240 = (r180 - c240)/c240
+		stock_strength = ((1+r240*0.8)*(1+r180*0.8)*(1+r120*0.8)*(1+r60*1.6)-1)*100
+		return stock_strength
+
 class StockInfo(BaseClass):
 	def __init__(self,code,name,industry_code,industry_name):
 		super(StockInfo,self).__init__()
