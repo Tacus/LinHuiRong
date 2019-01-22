@@ -9,10 +9,10 @@ import talib as tb
 from StockRSData import *
 
 
-def get_strong_market(datetime,count):
+def get_strong_market(datetime,count,frequency="1day"):
 	# codes = ["000001.XSHG","399006.XSHE","399005.XSHE"]
 	codes = ["000001.XSHG"]
-	panel = get_price(codes,end_date = datetime,count = count,fields = ["close"])
+	panel = get_price(codes,end_date = datetime,count = count,fields = ["close"],frequency=frequency)
 	# df_close = panel["close"]
 	# series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
 	# max_value = -1
@@ -33,7 +33,8 @@ def initialize(context):
 	set_option('use_real_price', True)
 	g.period = 240
 	g.strategy = TurtleStrategy(g.period)
-	run_monthly(monthly_function,monthday = 1,time = "after_close")
+	# run_monthly(monthly_function,monthday = 1,time = "after_close")
+	run_weekly(monthly_function,weekday = -1,time = "after_close")
 	run_daily(daily_function,time = "before_open")
 
 def daily_function(context):
@@ -95,7 +96,7 @@ class TurtleStrategy(BaseStrategy):
 		securities = securities_df.index.tolist()
 		count = self.trading_period
 		
-		pick_result_list = self.pick_strong_stocks("sw_l1",end_date,count)
+		pick_result_list = self.pick_strong_stocks("sw_l1",securities,end_date,count)
 		if( None != pick_result_list and 0 != len(pick_result_list)):
 			self.insert_to_industrylist(pick_result_list)
 
@@ -267,13 +268,18 @@ class TurtleStrategy(BaseStrategy):
 
 		self.start_trade(context,data)
 
-	def pick_strong_stocks(self,name,datetime,count):
-		history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume'])
+
+	# 1.计算rps
+	# 2.计算rs动能
+	# 3.
+	def pick_strong_stocks(self,name,securities,datetime,count):
+		history_data = get_price(security = securities,end_date = datetime,count = count,fields = ['close','volume'])
+		history_data_weekday = get_price(security = securities,end_date = datetime,count = count,fields = ['close'],frequency="5day")
 		codes = get_industries(name).index;
 		panel_industry = Utils.get_sw_quote(codes,end_date=datetime,count=count)
 		industry_closes = panel_industry.ClosePrice
 		industry_names = panel_industry.ChiName
-		series_market_closes = get_strong_market(datetime,count)
+		series_market_closes = get_strong_market(datetime,count,frequency="5day")
 		df_close = history_data["close"]
 		df_volume = history_data["volume"]
 		# series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
@@ -319,6 +325,8 @@ class TurtleStrategy(BaseStrategy):
 				new_industry.check_ema_rs(series_market_closes)
 				result.append(new_industry)
 		return result
+	def isup_rs_monmentum(closes):
+		
 	#计算个股强度
 	def get_price_rps(stock_close):
 		cur_price = stock_close[-1]
