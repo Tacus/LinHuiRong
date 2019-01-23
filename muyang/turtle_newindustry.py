@@ -11,7 +11,7 @@ from StockRSData import *
 
 def get_strong_market(datetime,count,frequency="1d"):
 	# codes = ["000001.XSHG","399006.XSHE","399005.XSHE"]
-	codes = ["000001.XSHG"]
+	codes = "000001.XSHG"
 	panel = get_price(codes,end_date = datetime,count = count,fields = ["close"],frequency=frequency)
 	df_close = panel["close"]
 	# series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
@@ -274,12 +274,12 @@ class TurtleStrategy(BaseStrategy):
 	# 3.
 	def pick_strong_stocks(self,name,securities,datetime,count):
 		history_data = get_price(security = securities,end_date = datetime,count = count,fields = ['close','volume'])
-		history_data_weekday = get_price(security = securities,end_date = datetime,count = 30,fields = ['close'],frequency="5d")
+		history_data_weekday = get_price(security = securities,end_date = datetime,count = count,fields = ['close'],frequency="5d")
 		codes = get_industries(name).index;
 		panel_industry = Utils.get_sw_quote(codes,end_date=datetime,count=count)
 		industry_closes = panel_industry.ClosePrice
 		industry_names = panel_industry.ChiName
-		series_market_closes = get_strong_market(datetime,30,frequency="5d")
+		series_market_closes = get_strong_market(datetime,count,frequency="5d")
 		df_close = history_data["close"]
 		df_close_weekday = history_data_weekday["close"]
 		df_volume = history_data["volume"]
@@ -294,14 +294,15 @@ class TurtleStrategy(BaseStrategy):
 			securities = get_industry_stocks(industry_code)
 			stock_infos = list()
 			for security in securities:
-				if( current_data[security].paused):
+				if( security not in df_close_weekday.columns or current_data[security].paused):
 					continue
-
-				stock_close_weekday = df_close[security]
-				rsmom_isup = self.isup_rs_monmentum(stock_close_weekday,series_market_closes)
-				print("rsmom_isup:",rsmom_isup)
+				stock_close_weekday = df_close_weekday[security]
+				rsmom_isup,series_rs,cur_ema_rs = self.isup_rs_monmentum(stock_close_weekday,series_market_closes)
+				print("rsmom_isup:",security,rsmom_isup)
+				if(not rsmom_isup):
+					continue
 				stock_close = df_close[security]
-				# series_rs = stock_close/series_market_closes
+				cur_price = stock_close[-1]	
 				# cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
 				# increase = round(series_increase[security],4)
 				stock_strength = self.get_price_rps(stock_close)
@@ -322,27 +323,25 @@ class TurtleStrategy(BaseStrategy):
 					break
 				if(cur_rs>ema_rs):
 					pick_count+=1
-					# print(stock_info)
+					print(stock_info)
 					new_industry.add_stockinfo(stock_info)
 
 			if(pick_count>0):
 				new_industry.check_ema_rs(series_market_closes)
 				result.append(new_industry)
 		return result
-	def isup_rs_monmentum(self,index_closes,stock_closes):
+	def isup_rs_monmentum(self,stock_closes,index_closes):
 		rs = stock_closes/index_closes
-		print(rs)
-		print(index_closes)
-		print(stock_closes)
+		rs = np.array(rs)
 		cur_rs = rs[-1]
 		ema_rs = tb.EMA(rs,39)
 		cur_emars = round(ema_rs[-1],4)
 		ma10 = tb.MA(rs,10)
 		ma30 = tb.MA(rs,30)
 		rsratio = ma10/ma30
-		mrsratio = tb.Ma(rsratio,9)
+		mrsratio = tb.MA(rsratio,9)
 		rrg = (rsratio - mrsratio)+1
-		return rsratio[-1]>1 and rrg[-1]>1 and rrg[-1]>rrg[-2] and cur_rs>cur_emars
+		return rsratio[-1]>1 and rrg[-1]>1 and rrg[-1]>rrg[-2] and cur_rs>cur_emars,rs,cur_emars
 
 	#计算个股强度
 	def get_price_rps(self,stock_close):
