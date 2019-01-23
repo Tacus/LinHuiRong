@@ -1,0 +1,16 @@
+选股日期：每月第一个交易日收盘
+1.价格rps（从高到低排序）
+2.个股rs:个股价格/指数价格  满足：rs动能方向向上
+3. 1 and 2 选出对应申万行业前五个股组成新行业
+4.根据得到的新行业rs动能向上：五只个股价格之和/指数价格 满足：rs动能方向向上
+
+
+rs动能向上公式：
+CC:="SH000001$CLOSE";
+rs:=c/cc;
+mrs:=MA(rs,10);
+MRSB:=MA(rs,30);
+RSratio:=MRS/mrsb;
+MRSRATIO:=MA(RSRATIO,9);
+rrg:=((RSRATIO-MRSRATIO)+1);
+RSratio>1 and rrg>1 and rrg>ref(rrg,1)
