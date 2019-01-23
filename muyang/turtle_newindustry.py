@@ -294,17 +294,17 @@ class TurtleStrategy(BaseStrategy):
 			securities = get_industry_stocks(industry_code)
 			stock_infos = list()
 			for security in securities:
-				if(not security in series_increase or current_data[security].paused):
+				if( current_data[security].paused):
 					continue
 
 				stock_close_weekday = df_close[security]
-				rsmom_isup = isup_rs_monmentum(stock_close_weekday,series_market_closes)
+				rsmom_isup = self.isup_rs_monmentum(stock_close_weekday,series_market_closes)
 				print("rsmom_isup:",rsmom_isup)
 				stock_close = df_close[security]
 				# series_rs = stock_close/series_market_closes
 				# cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
 				# increase = round(series_increase[security],4)
-				stock_strength = get_price_rps(stock_close)
+				stock_strength = self.get_price_rps(stock_close)
 				volume = df_volume[security][-1]
 				cur_rs = round(series_rs[-1],4)
 				security_name = current_data[security].name
@@ -329,7 +329,7 @@ class TurtleStrategy(BaseStrategy):
 				new_industry.check_ema_rs(series_market_closes)
 				result.append(new_industry)
 		return result
-	def isup_rs_monmentum(index_closes,stock_closes):
+	def isup_rs_monmentum(self,index_closes,stock_closes):
 		rs = stock_closes/index_closes
 		cur_rs = rs[-1]
 		ema_rs = tb.EMA(rs,39)
@@ -342,7 +342,7 @@ class TurtleStrategy(BaseStrategy):
 		return rsratio[-1]>1 and rrg[-1]>1 and rrg[-1]>rrg[-2] and cur_rs>cur_emars
 
 	#计算个股强度
-	def get_price_rps(stock_close):
+	def get_price_rps(self,stock_close):
 		cur_price = stock_close[-1]
 		c60 = stock_close[-60]
 		r60 = (cur_price - c60)/c60
