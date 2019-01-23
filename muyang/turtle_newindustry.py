@@ -9,7 +9,7 @@ import talib as tb
 from StockRSData import *
 
 
-def get_strong_market(datetime,count,frequency="1day"):
+def get_strong_market(datetime,count,frequency="1d"):
 	# codes = ["000001.XSHG","399006.XSHE","399005.XSHE"]
 	codes = ["000001.XSHG"]
 	panel = get_price(codes,end_date = datetime,count = count,fields = ["close"],frequency=frequency)
@@ -274,12 +274,12 @@ class TurtleStrategy(BaseStrategy):
 	# 3.
 	def pick_strong_stocks(self,name,securities,datetime,count):
 		history_data = get_price(security = securities,end_date = datetime,count = count,fields = ['close','volume'])
-		history_data_weekday = get_price(security = securities,end_date = datetime,count = 30,fields = ['close'],frequency="5day")
+		history_data_weekday = get_price(security = securities,end_date = datetime,count = 30,fields = ['close'],frequency="5d")
 		codes = get_industries(name).index;
 		panel_industry = Utils.get_sw_quote(codes,end_date=datetime,count=count)
 		industry_closes = panel_industry.ClosePrice
 		industry_names = panel_industry.ChiName
-		series_market_closes = get_strong_market(datetime,30,frequency="5day")
+		series_market_closes = get_strong_market(datetime,30,frequency="5d")
 		df_close = history_data["close"]
 		df_close_weekday = history_data_weekday["close"]
 		df_volume = history_data["volume"]
@@ -299,6 +299,7 @@ class TurtleStrategy(BaseStrategy):
 
 				stock_close_weekday = df_close[security]
 				rsmom_isup = isup_rs_monmentum(stock_close_weekday,series_market_closes)
+				print("rsmom_isup:",rsmom_isup)
 				stock_close = df_close[security]
 				# series_rs = stock_close/series_market_closes
 				# cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
@@ -329,7 +330,13 @@ class TurtleStrategy(BaseStrategy):
 				result.append(new_industry)
 		return result
 	def isup_rs_monmentum(index_closes,stock_closes):
-		return False
+		rs = stock_closes/index_closes
+		ma10 = tb.MA(rs,10)
+		ma30 = tb.MA(rs,30)
+		rsratio = ma10/ma30
+		mrsratio = tb.Ma(rsratio,9)
+		rrg = (rsratio - mrsratio)+1
+		return rsratio[-1]>1 and rrg[-1]>1 and rrg[-1]>rrg[-2]
 
 	#计算个股强度
 	def get_price_rps(stock_close):
