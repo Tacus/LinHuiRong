@@ -331,6 +331,9 @@ class TurtleStrategy(BaseStrategy):
 		return result
 	def isup_rs_monmentum(self,index_closes,stock_closes):
 		rs = stock_closes/index_closes
+		print(rs)
+		print(index_closes)
+		print(stock_closes)
 		cur_rs = rs[-1]
 		ema_rs = tb.EMA(rs,39)
 		cur_emars = round(ema_rs[-1],4)
