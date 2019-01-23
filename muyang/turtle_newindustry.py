@@ -13,7 +13,7 @@ def get_strong_market(datetime,count,frequency="1d"):
 	# codes = ["000001.XSHG","399006.XSHE","399005.XSHE"]
 	codes = ["000001.XSHG"]
 	panel = get_price(codes,end_date = datetime,count = count,fields = ["close"],frequency=frequency)
-	# df_close = panel["close"]
+	df_close = panel["close"]
 	# series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
 	# max_value = -1
 	# max_code = None
@@ -331,12 +331,15 @@ class TurtleStrategy(BaseStrategy):
 		return result
 	def isup_rs_monmentum(index_closes,stock_closes):
 		rs = stock_closes/index_closes
+		cur_rs = rs[-1]
+		ema_rs = tb.EMA(rs,39)
+		cur_emars = round(ema_rs[-1],4)
 		ma10 = tb.MA(rs,10)
 		ma30 = tb.MA(rs,30)
 		rsratio = ma10/ma30
 		mrsratio = tb.Ma(rsratio,9)
 		rrg = (rsratio - mrsratio)+1
-		return rsratio[-1]>1 and rrg[-1]>1 and rrg[-1]>rrg[-2]
+		return rsratio[-1]>1 and rrg[-1]>1 and rrg[-1]>rrg[-2] and cur_rs>cur_emars
 
 	#计算个股强度
 	def get_price_rps(stock_close):
