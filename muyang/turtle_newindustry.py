@@ -23,7 +23,34 @@ def get_strong_market(datetime,count,frequency="1d"):
 	# 		max_code = code
 	# return df_close[max_code]
 	return df_close
+def isup_rs_monmentum(stock_closes,index_closes):
+	rs = stock_closes/index_closes
+	rs = np.array(rs)
+	cur_rs = rs[-1]
+	ema_rs = tb.EMA(rs,39)
+	ma10 = tb.MA(rs,10)
+	ma30 = tb.MA(rs,30)
+	rsratio = ma10/ma30
+	mrsratio = tb.MA(rsratio,9)
+	rrg = (rsratio - mrsratio)+1
+	return rsratio[-1]>1 and rrg[-1]>1 and rrg[-1]>rrg[-2],rs,ema_rs
 
+#计算个股强度
+def get_price_rps(stock_close):
+	cur_price = stock_close[-1]
+	c60 = stock_close[-60]
+	r60 = (cur_price - c60)/c60
+
+	c120 = stock_close[-120]
+	r120 = (c60 - c120)/c120
+	
+	c180 = stock_close[-180]
+	r180 = (c120 - c180)/c180
+
+	c240 = stock_close[-240]
+	r240 = (r180 - c240)/c240
+	stock_strength = ((1+r240*0.8)*(1+r180*0.8)*(1+r120*0.8)*(1+r60*1.6)-1)*100
+	return stock_strength
 def handle_data(context,data):
 	g.strategy.handle_data(context,data)
 
@@ -34,7 +61,8 @@ def initialize(context):
 	g.period = 240
 	g.strategy = TurtleStrategy(g.period)
 	# run_monthly(monthly_function,monthday = 1,time = "after_close")
-	run_weekly(monthly_function,weekday = -1,time = "after_close")
+# 	run_weekly(monthly_function,weekday = -1,time = "after_close")
+	run_daily(monthly_function,time = "after_close")
 	run_daily(daily_function,time = "before_open")
 
 def daily_function(context):
@@ -297,21 +325,24 @@ class TurtleStrategy(BaseStrategy):
 				if( security not in df_close_weekday.columns or current_data[security].paused):
 					continue
 				stock_close_weekday = df_close_weekday[security]
-				rsmom_isup,series_rs,cur_ema_rs = self.isup_rs_monmentum(stock_close_weekday,series_market_closes)
-				print("rsmom_isup:",security,rsmom_isup)
+				rsmom_isup,rs,ema_rs = isup_rs_monmentum(stock_close_weekday,series_market_closes)
+				# print("rsmom_isup:",security,rsmom_isup)
 				if(not rsmom_isup):
 					continue
 				stock_close = df_close[security]
+				cur_rs = round(rs[-1],4)
+				cur_ema_rs = round(ema_rs[-1],4)
+				if(cur_rs<cur_ema_rs):
+					continue
 				cur_price = stock_close[-1]	
 				# cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
 				# increase = round(series_increase[security],4)
-				stock_strength = self.get_price_rps(stock_close)
+				stock_strength = get_price_rps(stock_close)
 				volume = df_volume[security][-1]
-				cur_rs = round(series_rs[-1],4)
 				security_name = current_data[security].name
 				stock_info = StockInfo(security,security_name,industry_code,industry_name)
-				stock_info.set_data(stock_strength,cur_price,stock_close,cur_rs,cur_ema_rs,volume)
-				stock_info.init_rs_data(series_rs)
+				stock_info.set_data(stock_strength,cur_price,stock_close_weekday,cur_rs,cur_ema_rs,volume)
+				stock_info.init_rs_data(rs)
 				stock_infos.append(stock_info)
 			stock_infos = sorted(stock_infos,key = lambda data: data.increase,reverse = True)
 			pick_count = 0
@@ -321,44 +352,16 @@ class TurtleStrategy(BaseStrategy):
 				ema_rs = stock_info.ema_rs
 				if(pick_count >= 5):
 					break
-				if(cur_rs>ema_rs):
-					pick_count+=1
-					print(stock_info)
-					new_industry.add_stockinfo(stock_info)
+				pick_count+=1
+				# print(stock_info)
+				new_industry.add_stockinfo(stock_info)
 
 			if(pick_count>0):
-				new_industry.check_ema_rs(series_market_closes)
+				isup = new_industry.check_ema_rs(series_market_closes)
+				print("the pick result:",isup,new_industry)
 				result.append(new_industry)
 		return result
-	def isup_rs_monmentum(self,stock_closes,index_closes):
-		rs = stock_closes/index_closes
-		rs = np.array(rs)
-		cur_rs = rs[-1]
-		ema_rs = tb.EMA(rs,39)
-		cur_emars = round(ema_rs[-1],4)
-		ma10 = tb.MA(rs,10)
-		ma30 = tb.MA(rs,30)
-		rsratio = ma10/ma30
-		mrsratio = tb.MA(rsratio,9)
-		rrg = (rsratio - mrsratio)+1
-		return rsratio[-1]>1 and rrg[-1]>1 and rrg[-1]>rrg[-2] and cur_rs>cur_emars,rs,cur_emars
-
-	#计算个股强度
-	def get_price_rps(self,stock_close):
-		cur_price = stock_close[-1]
-		c60 = stock_close[-60]
-		r60 = (cur_price - c60)/c60
-
-		c120 = stock_close[-120]
-		r120 = (c60 - c120)/c120
-		
-		c180 = stock_close[-180]
-		r180 = (c120 - c180)/c180
-
-		c240 = stock_close[-240]
-		r240 = (r180 - c240)/c240
-		stock_strength = ((1+r240*0.8)*(1+r180*0.8)*(1+r120*0.8)*(1+r60*1.6)-1)*100
-		return stock_strength
+	
 
 class StockInfo(BaseClass):
 	def __init__(self,code,name,industry_code,industry_name):
@@ -397,7 +400,6 @@ class StockInfo(BaseClass):
 		self.cur_rs = cur_rs
 		self.ema_rs = ema_rs
 		self.volume = volume
-
 
 	def daily_function(self,tq_longhighprice,tq_longlowprice,tq_shorthighprice,tq_shortlowprice,se_close,sh_close):
 		#唐安奇通道
@@ -444,9 +446,7 @@ class StockInfo(BaseClass):
 		current_N = (self.N)[-1]
 		dollar_volatility = self.dollars_per_share*current_N
 		# 依本策略，计算买卖的单位
-		print("calculate_unit",value,current_N,dollar_volatility,len(self.N))
 		self.unit = value*0.01/dollar_volatility
-		print("unit value",self.unit)
 
 	#6
 	# 入市：决定系统1、系统2是否应该入市，更新系统1和系统2的突破价格
@@ -621,12 +621,8 @@ class CustomIndustry:
 
     def check_ema_rs(self,series_market_closes):
         values = self.cal_value()
-        series_rs = values/series_market_closes
-        ema_rs = tb.EMA(np.array(series_rs),39)
-        # print(values,ema_rs,series_rs)
-        self.cur_rs = series_rs[-1]
-        self.cur_emars = ema_rs[-1]
-        return self.cur_rs > self.cur_emars
+        isup = isup_rs_monmentum(values,series_market_closes)
+        return isup
 
     def add_stockinfo(self,stock_info):
         self.stock_infos.append(stock_info)
@@ -646,6 +642,6 @@ class CustomIndustry:
     def __str__(self):
         text = ""
         for stock_info in self.stock_infos:
-            text = text + str(stock_info)+";"
-        return "CustomIndustry:"+text
+            text = text + str(stock_info)+";\n"
+        return "CustomIndustry:\n"+text
 
