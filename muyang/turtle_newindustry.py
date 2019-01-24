@@ -26,14 +26,13 @@ def get_strong_market(datetime,count,frequency="1d"):
 def isup_rs_monmentum(stock_closes,index_closes):
 	rs = stock_closes/index_closes
 	rs = np.array(rs)
-	cur_rs = rs[-1]
 	ema_rs = tb.EMA(rs,39)
 	ma10 = tb.MA(rs,10)
 	ma30 = tb.MA(rs,30)
 	rsratio = ma10/ma30
 	mrsratio = tb.MA(rsratio,9)
-	rrg = (rsratio - mrsratio)+1
-	return rsratio[-1]>1 and rrg[-1]>1 and rrg[-1]>rrg[-2],rs,ema_rs
+	rrg = rsratio - mrsratio
+	return rsratio[-1]>1 and rrg[-1]>0 and rrg[-1]>rrg[-2],rs,ema_rs
 
 #计算个股强度
 def get_price_rps(stock_close):
@@ -60,9 +59,9 @@ def initialize(context):
 	set_option('use_real_price', True)
 	g.period = 240
 	g.strategy = TurtleStrategy(g.period)
-	# run_monthly(monthly_function,monthday = 1,time = "after_close")
+	run_monthly(monthly_function,monthday = 1,time = "after_close")
 # 	run_weekly(monthly_function,weekday = -1,time = "after_close")
-	run_daily(monthly_function,time = "after_close")
+	# run_weekly(monthly_function,time = "after_close")
 	run_daily(daily_function,time = "before_open")
 
 def daily_function(context):
@@ -160,12 +159,10 @@ class TurtleStrategy(BaseStrategy):
 				securities.append(stock_info.code)
 		history_data = get_price(security = securities,end_date = end_date,count = count,fields = ['close','volume','high','low'])
 		current_data = get_current_data()
-		series_market_closes = get_strong_market(end_date,count)
 		df_close = history_data["close"]
 		df_high = history_data["high"]
 		df_low = history_data["low"]
 		df_volume = history_data["volume"]
-		series_increase = (df_close.iloc[-1] - df_close.iloc[0])/df_close.iloc[0]
 
 		#获取今日该股最高价与上证最高价求得rs（未来函数）
 		df = get_price("000001.XSHG",end_date = end_date,count = 1,frequency = "1d",fields = ("high"))
@@ -175,41 +172,22 @@ class TurtleStrategy(BaseStrategy):
 			for stock_info in industry.stock_infos:
 				code = stock_info.code
 				if(current_data[code].paused or df_close[code].empty):
-					print("股票停牌退市或者当前数据异常" ,code,current_data[code].paused,df_close[code].empty)
+					print("股票停牌退市或者当前数据异常:")
+					print(code,current_data[code].paused,df_close[code].empty)
 					continue
 				stock_closes = df_close[code]
 				stock_highs = df_high[code]
 				stock_lows = df_low[code]
-				self.calculate_rs(stock_info,series_market_closes,stock_lows,stock_highs,stock_closes,stock_closes[-1],sh_close)
+				self.calculate_rs(stock_info,stock_lows,stock_highs,stock_closes,stock_closes[-1],sh_close)
 				self.calculate_n(stock_info,stock_lows,stock_highs,stock_closes)
 
 
 	#计算rs数据
-	def calculate_rs(self,stock_info,series_market_closes,stock_lows,stock_highs,stock_closes,se_close,sh_close):
-		series_rs = stock_closes/series_market_closes
-		cur_ema_rs = round(tb.EMA(np.array(series_rs),39)[-1],4)
-
-		# increase = round(series_increase[code],4) #deprecate
-		ref_ema_rs30 = series_rs[-30]
-		c30 = (cur_ema_rs - ref_ema_rs30)/ref_ema_rs30
-
-		ref_ema_rs60 = series_rs[-60]
-		c60 = (ref_ema_rs30 - ref_ema_rs60)/ref_ema_rs60
-		
-		ref_ema_rs90 = series_rs[-90]
-		c90 = (ref_ema_rs60 - ref_ema_rs90)/ref_ema_rs90
-
-		ref_ema_rs120 = series_rs[-120]
-		c120 = (ref_ema_rs90 - ref_ema_rs120)/ref_ema_rs120
-
-		stock_strength = ((1+c120*0.8)*(1+c90*0.8)*(1+c60*0.8)*(1+c30*1.6)-1)*100
-
-		volume = 0
-		cur_rs = round(series_rs[-1],4)
+	def calculate_rs(self,stock_info,stock_lows,stock_highs,stock_closes,se_close,sh_close):
+		# series_rs = stock_closes/series_market_closes
+		stock_strength = get_price_rps(stock_close)
 		close_price = stock_closes[-1]
-		# stock_info.set_data(increase,close_price,stock_closes,cur_rs,cur_ema_rs,volume)
-		stock_info.set_data(stock_strength,close_price,stock_closes,cur_rs,cur_ema_rs,volume)
-
+		stock_info.set_data(stock_strength,close_price,stock_closes,None,None,None)
 		tq_longhighprice = max(stock_highs[-self.tq_longperiod:])
 		tq_longlowprice = min(stock_lows[-self.tq_longperiod:])
 		tq_shorthighprice = max(stock_highs[-self.tq_shortperiod:])
@@ -358,10 +336,16 @@ class TurtleStrategy(BaseStrategy):
 
 			if(pick_count>0):
 				isup = new_industry.check_ema_rs(series_market_closes)
-				print("the pick result:",isup,new_industry)
+				# print("the pick result:",isup,new_industry)
 				result.append(new_industry)
+		# toprintresult = list()
+		# for industry in result :
+		# 	for stock_info in industry.stock_infos:
+		# 		toprintresult.append(stock_info)
+		# toprintresult = sorted(toprintresult,key = lambda data: data.increase,reverse = True)
+		# for stock_info in toprintresult:
+		# 	print(stock_info)
 		return result
-	
 
 class StockInfo(BaseClass):
 	def __init__(self,code,name,industry_code,industry_name):
