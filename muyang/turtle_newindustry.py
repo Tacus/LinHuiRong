@@ -1,3 +1,4 @@
+#coding = utf-8
 ######### rs选股-海龟交易 #########
 from jqdata import jy
 from jqdata import *
@@ -131,12 +132,29 @@ class TurtleStrategy(BaseStrategy):
 			self.insert_industry(industry_data)
 
 	def insert_industry(self,industry_data_new):
+		self.check_duplicate_stock(industry_data_new)
 		industry_data = self.get_industry(industry_data_new.industry)
 		if(None != industry_data):
 			industry_data.insert_stock_from_industry(industry_data_new)
 		else:
 			self.new_industries.append(industry_data_new)
 
+	def check_duplicate_stock(self,industry_data_new):
+		for stock_info in industry_data_new.stock_infos:
+			exsit = self.check_stock_in_industry(stock_info)
+			if(exsit):
+				industry_data_new.stock_infos.remove(stock_info)
+
+	def check_stock_in_industry(self,stock_info):
+		for industry_data in self.new_industries:
+			exsit = self.remove_stock_from_industry(stock_info,industry_data)
+			if(exsit):
+				return True
+	def remove_stock_from_industry(self,stock_info,industry_data):
+		for stock_data in industry_data.stock_infos:
+			if(stock_data.code == stock_info.code):
+				return True
+				break
 	def get_industry(self,industry_code):
 		for industry_data in self.new_industries:
 			if industry_data.industry == industry_code:
@@ -175,6 +193,7 @@ class TurtleStrategy(BaseStrategy):
 					print(code,current_data[code].paused,df_close[code].empty)
 					continue
 				stock_closes = df_close[code]
+				print(stock_closes)
 				stock_highs = df_high[code]
 				stock_lows = df_low[code]
 				self.calculate_rs(stock_info,stock_lows,stock_highs,stock_closes,stock_closes[-1],sh_close)
@@ -184,7 +203,7 @@ class TurtleStrategy(BaseStrategy):
 	#计算rs数据
 	def calculate_rs(self,stock_info,stock_lows,stock_highs,stock_closes,se_close,sh_close):
 		# series_rs = stock_closes/series_market_closes
-		stock_strength = get_price_rps(stock_close)
+		stock_strength = get_price_rps(stock_closes)
 		close_price = stock_closes[-1]
 		stock_info.set_data(stock_strength,close_price,stock_closes,None,None,None)
 		tq_longhighprice = max(stock_highs[-self.tq_longperiod:])
@@ -335,8 +354,9 @@ class TurtleStrategy(BaseStrategy):
 
 			if(pick_count>0):
 				isup = new_industry.check_ema_rs(series_market_closes)
+				if(isup):
+					result.append(new_industry)
 				# print("the pick result:",isup,new_industry)
-				result.append(new_industry)
 		# toprintresult = list()
 		# for industry in result :
 		# 	for stock_info in industry.stock_infos:
@@ -625,6 +645,6 @@ class CustomIndustry:
     def __str__(self):
         text = ""
         for stock_info in self.stock_infos:
-            print(stock_info)
-        return ""
+            text = text + str(stock_info)+";\n"
+        return "CustomIndustry:\n"+text
 
