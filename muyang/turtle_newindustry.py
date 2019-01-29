@@ -1,4 +1,3 @@
-#coding = utf-8
 ######### rs选股-海龟交易 #########
 from jqdata import jy
 from jqdata import *
@@ -358,7 +357,7 @@ class TurtleStrategy(BaseStrategy):
 
 			if(pick_count>0):
 				isup = new_industry.check_ema_rs(series_market_closes)
-				print("the pick result:",isup,new_industry)
+				print("the pick result:",isup,str(new_industry))
 				result.append(new_industry)
 		return result
 	
@@ -621,7 +620,7 @@ class CustomIndustry:
 
     def check_ema_rs(self,series_market_closes):
         values = self.cal_value()
-        isup = isup_rs_monmentum(values,series_market_closes)
+        isup,_,_ = isup_rs_monmentum(values,series_market_closes)
         return isup
 
     def add_stockinfo(self,stock_info):
@@ -642,6 +641,6 @@ class CustomIndustry:
     def __str__(self):
         text = ""
         for stock_info in self.stock_infos:
-            text = text + str(stock_info)+";\n"
-        return "CustomIndustry:\n"+text
+            print(stock_info)
+        return ""
 
