@@ -132,14 +132,14 @@ class TurtleStrategy(BaseStrategy):
 			self.insert_industry(industry_data)
 
 	def insert_industry(self,industry_data_new):
-		self.check_duplicate_stock(industry_data_new)
+		self.remove_duplicate_stock(industry_data_new)
 		industry_data = self.get_industry(industry_data_new.industry)
 		if(None != industry_data):
 			industry_data.insert_stock_from_industry(industry_data_new)
 		else:
 			self.new_industries.append(industry_data_new)
 
-	def check_duplicate_stock(self,industry_data_new):
+	def remove_duplicate_stock(self,industry_data_new):
 		for stock_info in industry_data_new.stock_infos:
 			exsit = self.check_stock_in_industry(stock_info)
 			if(exsit):
@@ -147,14 +147,13 @@ class TurtleStrategy(BaseStrategy):
 
 	def check_stock_in_industry(self,stock_info):
 		for industry_data in self.new_industries:
-			exsit = self.remove_stock_from_industry(stock_info,industry_data)
+			exsit = self.is_exsit_in_industry(stock_info,industry_data)
 			if(exsit):
 				return True
-	def remove_stock_from_industry(self,stock_info,industry_data):
+	def is_exsit_in_industry(self,stock_info,industry_data):
 		for stock_data in industry_data.stock_infos:
 			if(stock_data.code == stock_info.code):
 				return True
-				break
 	def get_industry(self,industry_code):
 		for industry_data in self.new_industries:
 			if industry_data.industry == industry_code:
@@ -193,7 +192,8 @@ class TurtleStrategy(BaseStrategy):
 					print(code,current_data[code].paused,df_close[code].empty)
 					continue
 				stock_closes = df_close[code]
-				print(stock_closes)
+				if(str(type(stock_closes)).find("DataFrame") != -1):
+					print(stock_closes)			
 				stock_highs = df_high[code]
 				stock_lows = df_low[code]
 				self.calculate_rs(stock_info,stock_lows,stock_highs,stock_closes,stock_closes[-1],sh_close)

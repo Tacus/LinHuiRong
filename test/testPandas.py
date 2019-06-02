@@ -42,10 +42,5 @@ import math
 # if(match):
 # 	print("xxx111",match.group(1))
 # print("xxx222",match)
-
-log = math.log(0.5)/10
-a = 1-math.exp(log)
-
-def ewa(com = None,span = None,halflife = None,alpha = None,min_period = 0,adjust = True,ignore_na = False,axis = 0):
-	if(None != com):
-		a = 
+a = "xxhahaDataFrame232"
+print(a.find("DataFrame1"))
